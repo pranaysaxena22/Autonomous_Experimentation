@@ -1,6 +1,9 @@
 # Virtual environment (recreate with requirements.txt)
 .venv/
 
+# Output of simulation runs and checks (regenerate any time)
+runs/
+
 # Python caches
 __pycache__/
 *.pyc

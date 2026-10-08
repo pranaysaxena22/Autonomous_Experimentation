@@ -1,0 +1,82 @@
+# =====================================================================
+#  SETTINGS FILE - every number you may want to change lives here.
+#  All values are ILLUSTRATIVE PLACEHOLDERS, to be replaced by a
+#  client's real design space.
+#
+#  Rules of thumb:
+#    * Change a number, save, re-run the check (check_stage1.bat).
+#    * If something is wrong you get a plain-English message.
+#    * Times are in minutes unless the name says otherwise.
+# =====================================================================
+
+display:
+  banner: "Simulation with illustrative values"
+  accent_colour: "#86BC25"       # Deloitte green
+  font: "Open Sans"
+
+# ---- The recipe space: five ingredients, each varied between min and max (% of tablet)
+design_space:
+  ingredients:
+    drug:         { label: "Drug",         min: 10,   max: 30 }
+    filler:       { label: "Filler",       min: 40,   max: 70 }
+    binder:       { label: "Binder",       min: 2,    max: 6  }
+    disintegrant: { label: "Disintegrant", min: 1,    max: 8  }
+    lubricant:    { label: "Lubricant",    min: 0.25, max: 2  }
+
+# ---- What "good" means for a finished tablet
+specifications:
+  dissolution_30min:
+    label: "Dissolution at 30 min"
+    unit: "%"
+    minimum: 85                  # good = at least this
+    margin_scale: 5              # how many % of headroom counts as "comfortably good"
+  hardness:
+    label: "Hardness"
+    unit: "kP"
+    minimum: 6                   # good = between minimum and maximum
+    maximum: 10
+
+# ---- The cell: steps every trial goes through, in order
+cell:
+  steps:
+    - { name: "dispense", label: "Dispense", duration_minutes: 30 }
+    - { name: "blend",    label: "Blend",    duration_minutes: 45 }
+    - { name: "press",    label: "Press",    duration_minutes: 30 }
+    - { name: "test",     label: "Test",     duration_minutes: 75 }
+    - { name: "clean",    label: "Clean",    duration_minutes: 60 }
+
+# ---- The run and who is in the building
+run:
+  start: "2026-10-09 18:00"      # a Friday evening
+  duration_hours: 120
+  random_seed: 2026              # same seed = identical results every time
+
+people:
+  staffed_days: ["Mon", "Tue"]   # nobody is in the lab on any other day
+  staffed_from: "08:00"
+  staffed_until: "18:00"
+
+# ---- Virtual lab: how noisy the measurements are
+virtual_lab:
+  noise:
+    dissolution_sd: 2.0          # typical scatter, in % points
+    hardness_sd: 0.35            # typical scatter, in kP
+
+# ---- Faults that happen on purpose (used when the simulator is built)
+scripted_faults:
+  purge_minutes: 60              # time to purge and reset after a failure
+  events:
+    - trial: 8
+      station: "press"
+      retry_succeeds: true       # purge, retry, carry on
+      alert: "Press jam on trial 8 - purged and retried successfully"
+    - trial: 19
+      station: "press"
+      retry_succeeds: false      # retry also fails: candidate skipped
+      alert: "Press jam on trial 19 - retry failed, candidate skipped"
+
+# ---- The headline comparison
+comparison:
+  campaigns: 40                  # repeated campaigns for adaptive vs fixed list
+  trials_per_campaign: 30
+  manual_baseline_trials_per_week: 9
