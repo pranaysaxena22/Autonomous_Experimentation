@@ -2,7 +2,10 @@
 
 This is how we ask "how close did a campaign get to the best possible tablet?".
 The decision engine and the dashboard must never import this module; an automated
-check (check_stage1.bat) enforces that.
+check enforces that. Only the virtual lab and the after-the-fact scoring module may.
+
+`dissolution_offset` makes the same truth easier (positive) or harder (negative); it is
+used only for the difficulty sensitivity table and is 0 everywhere else.
 """
 from __future__ import annotations
 
@@ -13,19 +16,19 @@ from ..settings import Settings
 from ._truth import true_dissolution_pct, true_hardness_kp
 
 
-def true_properties(formulation: Formulation) -> tuple[float, float]:
+def true_properties(formulation: Formulation, dissolution_offset: float = 0.0) -> tuple[float, float]:
     """(dissolution %, hardness kP) with no measurement noise."""
-    return true_dissolution_pct(formulation), true_hardness_kp(formulation)
+    return true_dissolution_pct(formulation, dissolution_offset), true_hardness_kp(formulation)
 
 
-def true_margin(formulation: Formulation, settings: Settings) -> float:
+def true_margin(formulation: Formulation, settings: Settings, dissolution_offset: float = 0.0) -> float:
     """How comfortably the formulation is truly good (positive = meets spec)."""
-    dissolution, hardness = true_properties(formulation)
+    dissolution, hardness = true_properties(formulation, dissolution_offset)
     return margin(dissolution, hardness, settings.specifications)
 
 
-def truly_meets_spec(formulation: Formulation, settings: Settings) -> bool:
-    dissolution, hardness = true_properties(formulation)
+def truly_meets_spec(formulation: Formulation, settings: Settings, dissolution_offset: float = 0.0) -> bool:
+    dissolution, hardness = true_properties(formulation, dissolution_offset)
     return meets_spec(dissolution, hardness, settings.specifications)
 
 
@@ -33,10 +36,12 @@ def random_formulation(settings: Settings, rng: random.Random) -> Formulation:
     return Formulation(*[rng.uniform(i.min, i.max) for i in settings.design_space.ingredients])
 
 
-def feasible_fraction(settings: Settings, samples: int = 20000, seed: int = 1) -> float:
+def feasible_fraction(settings: Settings, samples: int = 20000, seed: int = 1,
+                      dissolution_offset: float = 0.0) -> float:
     """Share of the design space that truly meets spec, estimated by random sampling."""
     rng = random.Random(seed)
-    good = sum(truly_meets_spec(random_formulation(settings, rng), settings) for _ in range(samples))
+    good = sum(truly_meets_spec(random_formulation(settings, rng), settings, dissolution_offset)
+               for _ in range(samples))
     return good / samples
 
 

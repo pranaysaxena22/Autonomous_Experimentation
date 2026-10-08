@@ -23,7 +23,6 @@ from cellpoc.contracts import Formulation  # noqa: E402
 from cellpoc.decision_engine import FixedListStrategy  # noqa: E402
 from cellpoc.runner import run_fixed_list  # noqa: E402
 from cellpoc.settings import SettingsError, load_settings  # noqa: E402
-from cellpoc.settings.models import Cell  # noqa: E402
 from cellpoc.virtual_lab import VirtualLab  # noqa: E402
 from checks import architecture  # noqa: E402
 from checks.common import Checklist, write_chart_page  # noqa: E402
@@ -142,7 +141,7 @@ def check_headline(settings, run):
 def check_what_if(settings):
     """Stretch the blend step and confirm the cell copes: fewer trials fit and the log explains why."""
     steps = tuple(dataclasses.replace(x, duration_minutes=90) if x.name == "blend" else x for x in settings.cell.steps)
-    slower = dataclasses.replace(settings, cell=Cell(steps, settings.cell.measurement_step))
+    slower = dataclasses.replace(settings, cell=dataclasses.replace(settings.cell, steps=steps))
     run = run_fixed_list(slower)
     per_trial = slower.cell.minutes_per_trial
     expected = int(slower.run.duration_hours * 60 // per_trial)

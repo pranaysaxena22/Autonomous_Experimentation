@@ -1,7 +1,7 @@
 """The strategy comparison, already worked out for display. Part of the run record."""
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -40,6 +40,23 @@ class PairedComparison:
 
 
 @dataclass
+class DifficultyStrategyResult:
+    label: str
+    found_pct: float                  # % of campaigns that found a truly good recipe within the campaign length
+    median_trial: int | None          # None = fewer than half of the campaigns found one in time
+    trial_by_25pct: int | None
+    trial_by_75pct: int | None
+
+
+@dataclass
+class DifficultyRow:
+    """The same comparison repeated on an easier or harder version of the hidden truth (no faults)."""
+    level: str                        # "Harder", "Default", "Easier"
+    good_share_pct: float             # % of random recipes that are truly good at this level
+    strategies: list[DifficultyStrategyResult]
+
+
+@dataclass
 class ComparisonResult:
     campaigns: int
     trials_per_campaign: int
@@ -52,3 +69,4 @@ class ComparisonResult:
     measure_notes: list[str]
     strategies: list[StrategyComparison]
     paired: list[PairedComparison]
+    difficulty: list[DifficultyRow] = field(default_factory=list)   # sensitivity to how rare good recipes are

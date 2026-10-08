@@ -61,9 +61,19 @@ class Step:
 
 
 @dataclass(frozen=True)
+class Phases:
+    """Which steps belong to which of Sense / Reason / Act / Adapt."""
+    act: tuple[str, ...]
+    sense: tuple[str, ...]
+    reason_adapt_step: str
+    reason_minutes: float
+
+
+@dataclass(frozen=True)
 class Cell:
     steps: tuple[Step, ...]
     measurement_step: str
+    phases: Phases
 
     @property
     def minutes_per_trial(self) -> float:

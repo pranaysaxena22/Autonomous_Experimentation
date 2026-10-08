@@ -21,6 +21,7 @@ class RunMeta:
     start: str
     end: str
     duration_minutes: int
+    faults_applied: bool
 
 
 @dataclass
@@ -43,13 +44,28 @@ class CalendarBlock:
 
 @dataclass
 class StepInterval:
-    step: str
-    label: str
+    """One stretch of work at one station. A fault adds a failed attempt, a purge and a retry."""
+    step: str                     # the station / step name
+    label: str                    # e.g. "Dispense", "Dispense - failed attempt", "Purge", "Dispense - retry"
+    kind: str                     # step, failed_attempt, purge, retry
+    outcome: str                  # completed or failed
     start_minute: float
     end_minute: float
     start: str
     end: str
-    attended: bool                # was someone in the lab when the step began
+    attended: bool                # was someone in the lab when it began
+
+
+@dataclass
+class PhaseInterval:
+    """Sense / Reason / Act / Adapt for one trial, with when it happened and what it did."""
+    phase: str                    # Act, Sense, Reason, Adapt
+    start_minute: float
+    end_minute: float
+    start: str
+    end: str
+    status: str                   # completed or failed
+    description: str
 
 
 @dataclass
@@ -57,17 +73,20 @@ class TrialRecord:
     trial: int
     recipe: dict[str, float]      # ingredient key -> percent
     reason: str                   # why the decision engine chose this recipe
+    status: str                   # Completed or Skipped
     steps: list[StepInterval]
+    phases: list[PhaseInterval]
     start_minute: float
     end_minute: float
     start: str
     end: str
-    dissolution_pct: float
-    hardness_kp: float
-    outcome: str                  # "Good" or "Not good"
-    margin: float                 # how comfortably good (negative = failed)
-    best_margin_so_far: float
-    good_so_far: int              # number of good trials up to and including this one
+    dissolution_pct: float | None  # None when the trial was skipped (no result)
+    hardness_kp: float | None
+    outcome: str                  # Good, Not good, or No result
+    margin: float | None          # how comfortably good (negative = failed)
+    best_margin_so_far: float | None
+    good_so_far: int              # good trials up to and including this one
+    notes: list[str]              # faults and recoveries, in words
 
 
 @dataclass
@@ -75,7 +94,9 @@ class EventRecord:
     minute: float
     time: str
     when: str
-    kind: str                     # run_started, decision, step_started, step_finished, measurement, trial_completed, run_finished
+    kind: str                     # run_started, decision, step_started, step_finished, measurement, trial_completed,
+                                  # fault, purge_started, purge_finished, recovery, retry_failed, candidate_skipped,
+                                  # alert_queued, run_finished
     trial: int | None
     station: str | None
     attended: bool
@@ -83,8 +104,40 @@ class EventRecord:
 
 
 @dataclass
+class AlertRecord:
+    minute: float
+    time: str
+    when: str
+    trial: int
+    severity: str                 # Recovered, or Needs attention
+    title: str
+    message: str
+    needs_human: bool
+    queued_for: str | None        # when staff will next be in, e.g. "Tue 13 Oct 08:00" (None = nobody is needed)
+
+
+@dataclass
+class HandoverSummary:
+    """What happened while nobody was in the lab, written ready to read out when staff arrive."""
+    start_minute: int
+    end_minute: int
+    start: str
+    end: str
+    title: str
+    text: str
+    trials_started: int
+    trials_with_result: int
+    trials_skipped: int
+    trials_good: int
+    faults: int
+    alerts_for_staff: int
+
+
+@dataclass
 class Summary:
-    trials_completed: int
+    trials_attempted: int
+    trials_with_result: int
+    trials_skipped: int
     trials_good: int
     first_good_trial: int | None
     best_trial: int | None
@@ -92,10 +145,13 @@ class Summary:
     run_hours: float
     unattended_hours: float
     trials_started_unattended: int
-    trials_per_week: float
+    faults_recovered: int
+    alerts_for_staff: int
+    trials_per_week: float        # trials WITH A RESULT, scaled to a 168-hour week
     manual_baseline_trials_per_week: float
     speedup_vs_manual: float
     headline: str
+    attempts_text: str            # e.g. "30 attempted: 29 with a result, 1 skipped"
 
 
 @dataclass
@@ -106,5 +162,8 @@ class RunRecord:
     calendar: list[CalendarBlock]
     trials: list[TrialRecord]
     events: list[EventRecord]
+    alerts: list[AlertRecord]
+    handovers: list[HandoverSummary]
     summary: Summary
-    comparison: ComparisonResult | None = None   # the multi-campaign strategy comparison, when one was run
+    comparison: ComparisonResult | None = None               # the headline strategy comparison (no faults)
+    comparison_with_faults: ComparisonResult | None = None   # the same with the scripted faults applied

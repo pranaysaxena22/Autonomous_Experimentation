@@ -147,6 +147,23 @@ def check_comparison(settings, result, label):
            f"{label}: the campaign-by-campaign (paired) tally accounts for all {n} campaigns", paired.sentence)
 
 
+def check_difficulty(settings, result):
+    from cellpoc.comparison.difficulty import LEVELS
+
+    rows = result.difficulty
+    record([r.level for r in rows] == ["Harder", "Default", "Easier"],
+           "The difficulty table has three levels: harder, default, easier", ", ".join(r.level for r in rows))
+    for row, (level, target, _) in zip(rows, LEVELS):
+        record(abs(row.good_share_pct / 100 - target) <= max(0.004, 0.25 * target),
+               f"Difficulty '{level}': the share of random recipes that are truly good is close to its target",
+               f"{row.good_share_pct:.1f}% truly good (target about {target:.0%})")
+    default = rows[1]
+    adaptive_main = [s for s in result.strategies if s.key == "adaptive"][0].truly_good
+    adaptive_row = [s for s in default.strategies if s.label == "Adaptive"][0]
+    record(adaptive_row.found_pct == adaptive_main.found_pct and adaptive_row.median_trial == adaptive_main.median_trial,
+           "The 'default' difficulty row is the headline comparison itself (same engine, same seeds, no faults)")
+
+
 def check_pairing_and_scoring(settings):
     lab = VirtualLab(settings, seed=settings.run.random_seed)
     a = Formulation(20, 55, 4, 4.5, 1.1)
@@ -211,6 +228,13 @@ def summary_lines(result):
         lines.append(f"{s.label:<12}{trial_text(m.trial_by_25pct):>20}{trial_text(m.median_trial):>17}"
                      f"{trial_text(m.trial_by_75pct):>10}{percent(m.found_pct):>18}")
     lines += [""] + [p.sentence for p in result.paired] + [""] + result.measure_notes
+    if result.difficulty:
+        lines += ["", "SENSITIVITY TO DIFFICULTY - same comparison (no faults, same seeds, same engine) when good recipes are rarer or commoner",
+                  f"{'Level':<10}{'Random recipes truly good':>27}{'Strategy':>13}{'Found within ' + str(trials):>18}{'Median trial':>14}"]
+        for row in result.difficulty:
+            for i, s in enumerate(row.strategies):
+                lead = (f"{row.level:<10}{row.good_share_pct:>26.1f}%" if i == 0 else " " * 37)
+                lines.append(f"{lead}{s.label:>13}{percent(s.found_pct):>18}{trial_text(s.median_trial):>14}")
     return lines
 
 
@@ -283,8 +307,10 @@ def main() -> int:
     record(small_a == small_b, "The same seeds give identical comparison results, down to every number (checked on 6 campaigns)")
 
     print("Running the full comparison twice (without and with faults); this takes about a minute...", flush=True)
-    demo = run_demo(settings, run_id="stage3-adaptive-demo", with_faults=False)
-    demo_faults = run_demo(settings, run_id="stage3-adaptive-demo-faults", with_faults=True)
+    demo = run_demo(settings, run_id="stage3-adaptive-demo", with_faults=False)   # also runs the difficulty levels
+    demo_faults = run_demo(settings, run_id="stage3-adaptive-demo-faults", with_faults=True,
+                           difficulty=demo.comparison.difficulty)
+    check_difficulty(settings, demo.comparison)
     check_comparison(settings, demo.comparison, "No faults")
     check_comparison(settings, demo_faults.comparison, "With faults")
     record(demo.comparison.skipped_trials == [] and demo_faults.comparison.skipped_trials == sorted(settings.scripted_faults.skipped_trials),
@@ -293,7 +319,7 @@ def main() -> int:
     why = [e.message for e in demo.events if e.kind == "decision"]
     record(len(why) == len(demo.trials) and all("Recipe:" in w and len(w) > 80 for w in why),
            "The demonstration run logs every decision with its reason and recipe", f"{len(why)} decisions")
-    record(demo.meta.strategy_name == "adaptive" and demo.summary.trials_completed == 30,
+    record(demo.meta.strategy_name == "adaptive" and demo.summary.trials_with_result == 30,
            "The demonstration run (adaptive, default seed) completed all 30 trials in the simulated cell")
 
     engine_imports = architecture._imported_parts(ROOT / "cellpoc" / "decision_engine" / "adaptive.py")

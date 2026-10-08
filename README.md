@@ -23,6 +23,10 @@ Stage 3: double-click `check_stage3.bat` (takes about a minute). It runs the ada
 40-campaign comparison (fixed list vs adaptive vs random, with and without faults) and writes
 `runs\stage3\comparison_summary.txt`, `comparison.html`, `campaigns.csv` and `demo_event_log.csv`.
 
+Stage 4: double-click `check_stage4.bat`. It runs the closed-loop unattended run with the scripted faults
+and writes `runs\stage4\closed_loop_summary.txt`, `timeline.html`, `trials.csv`, `event_log.csv` and `alerts.csv`.
+It also confirms every generated chart page works with no internet, so run the Stage 1-3 checks first.
+
 ## Add a library
 
     .venv\Scripts\python.exe -m pip install <package>

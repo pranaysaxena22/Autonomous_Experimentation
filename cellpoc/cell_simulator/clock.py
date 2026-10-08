@@ -29,6 +29,14 @@ class RunClock:
         return (moment.weekday() in self._people.staffed_weekdays
                 and self._people.staffed_from <= moment.time() < self._people.staffed_until)
 
+    def next_staffed_start(self, minute: float) -> int | None:
+        """The first minute after `minute` at which someone arrives, or None if nobody does before the run ends."""
+        now = int(minute)
+        for later in range(now + 1, self.duration_minutes + 1):
+            if self.attended(later) and not self.attended(later - 1):
+                return later
+        return None
+
     def calendar(self) -> list[CalendarBlock]:
         """The whole run cut into alternating staffed / unattended blocks."""
         blocks: list[CalendarBlock] = []

@@ -42,7 +42,8 @@ def make_strategy(key: str, settings: Settings, seed: int) -> Strategy:
     raise KeyError(key)
 
 
-def first_trials(settings: Settings, outcome: Sequence[CampaignTrial]) -> tuple[int | None, int | None]:
+def first_trials(settings: Settings, outcome: Sequence[CampaignTrial],
+                 dissolution_offset: float = 0.0) -> tuple[int | None, int | None]:
     """(first trial MEASURED as passing, first trial whose recipe was TRULY good), scored after the fact."""
     measured = truly = None
     for t in outcome:
@@ -51,7 +52,7 @@ def first_trials(settings: Settings, outcome: Sequence[CampaignTrial]) -> tuple[
         if measured is None and meets_spec(t.measurement.dissolution_pct, t.measurement.hardness_kp,
                                            settings.specifications):
             measured = t.trial
-        if truly is None and truly_good(t.formulation, settings):
+        if truly is None and truly_good(t.formulation, settings, dissolution_offset):
             truly = t.trial
     return measured, truly
 
@@ -92,7 +93,8 @@ def _describe(s: StrategyComparison, trials: int) -> str:
             f"{stats.found_pct:.0f}% of campaigns found one within {trials} trials.")
 
 
-def compare(settings: Settings, *, campaigns: int | None = None, with_faults: bool = False) -> ComparisonResult:
+def compare(settings: Settings, *, campaigns: int | None = None, with_faults: bool = False,
+            dissolution_offset: float = 0.0) -> ComparisonResult:
     trials = settings.comparison.trials_per_campaign
     seeds = campaign_seeds(settings, campaigns)
     skipped_trials = settings.scripted_faults.skipped_trials if with_faults else frozenset()
@@ -100,9 +102,9 @@ def compare(settings: Settings, *, campaigns: int | None = None, with_faults: bo
     firsts: dict[str, list[tuple[int | None, int | None]]] = {key: [] for key, _ in STRATEGIES}
     for seed in seeds:
         for key, _ in STRATEGIES:
-            outcome = run_campaign(VirtualLab(settings, seed=seed), make_strategy(key, settings, seed), trials,
-                                   skipped_trials)
-            firsts[key].append(first_trials(settings, outcome))
+            outcome = run_campaign(VirtualLab(settings, seed=seed, dissolution_offset=dissolution_offset),
+                                   make_strategy(key, settings, seed), trials, skipped_trials)
+            firsts[key].append(first_trials(settings, outcome, dissolution_offset))
 
     strategies = []
     for key, label in STRATEGIES:

@@ -11,6 +11,11 @@ from .settings import Settings
 from .virtual_lab import oracle
 
 
-def truly_good(formulation: Formulation, settings: Settings) -> bool:
+def truly_good(formulation: Formulation, settings: Settings, dissolution_offset: float = 0.0) -> bool:
     """Does this recipe really meet the specifications, with no measurement noise?"""
-    return oracle.truly_meets_spec(formulation, settings)
+    return oracle.truly_meets_spec(formulation, settings, dissolution_offset)
+
+
+def truly_good_share(settings: Settings, dissolution_offset: float = 0.0, samples: int = 50000) -> float:
+    """The share of random recipes that are truly good (how hard the problem is), 0-1."""
+    return oracle.feasible_fraction(settings, samples=samples, dissolution_offset=dissolution_offset)

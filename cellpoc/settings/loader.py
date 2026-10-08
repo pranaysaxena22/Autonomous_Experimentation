@@ -9,7 +9,7 @@ import yaml
 
 from .models import (
     Cell, Comparison, DesignSpace, Display, DissolutionSpec, EngineSettings, HardnessSpec,
-    Ingredient, Noise, People, Run, ScriptedFault, ScriptedFaults, Settings,
+    Ingredient, Noise, People, Phases, Run, ScriptedFault, ScriptedFaults, Settings,
     Specifications, Step,
 )
 
@@ -153,6 +153,30 @@ def settings_from_dict(raw: Any) -> Settings:
     if measurement_step and measurement_step not in names:
         r.problem("cell > measurement_step", f"'{measurement_step}' is not one of the cell steps ({', '.join(names)}).")
 
+    ph = r.section(cell_raw, "phases", "cell")
+    phase_lists = {}
+    for key in ("act", "sense"):
+        value = ph.get(key)
+        if not isinstance(value, list) or not value:
+            r.problem(f"cell > phases > {key}", "expected a list of step names.")
+            value = []
+        for name in value:
+            if name not in names:
+                r.problem(f"cell > phases > {key}", f"'{name}' is not one of the cell steps ({', '.join(names)}).")
+        phase_lists[key] = tuple(value)
+    think_step = r.text(ph, "reason_adapt_step", "cell > phases")
+    reason_minutes = r.number(ph, "reason_minutes", "cell > phases", positive=True)
+    if think_step and think_step not in names:
+        r.problem("cell > phases > reason_adapt_step", f"'{think_step}' is not one of the cell steps ({', '.join(names)}).")
+    elif think_step:
+        if think_step != names[-1]:
+            r.problem("cell > phases > reason_adapt_step", f"'{think_step}' must be the last step ('{names[-1]}'): the cell decides what to do next while it finishes.")
+        duration = steps[names.index(think_step)].duration_minutes
+        if reason_minutes >= duration:
+            r.problem("cell > phases > reason_minutes",
+                      f"{reason_minutes:g} minutes must be shorter than the whole '{think_step}' step ({duration:g} minutes), so some time is left for Adapt.")
+    phases = Phases(phase_lists["act"], phase_lists["sense"], think_step, reason_minutes)
+
     # run
     run_raw = r.section(raw, "run", "")
     start_text = r.text(run_raw, "start", "run")
@@ -221,6 +245,9 @@ def settings_from_dict(raw: Any) -> Settings:
             r.problem(f"{where} > retry_succeeds", f"expected true or false but found {retry!r}.")
         if station and station not in names:
             r.problem(f"{where} > station", f"'{station}' is not one of the cell steps ({', '.join(names)}).")
+        elif station and station == think_step:
+            r.problem(f"{where} > station",
+                      f"'{station}' is the final step, where the cell decides what to do next; scripted faults there are not supported.")
         if trial > comparison.trials_per_campaign:
             r.problem(f"{where} > trial",
                       f"trial {trial} is beyond the {comparison.trials_per_campaign} trials in a campaign.")
@@ -233,4 +260,4 @@ def settings_from_dict(raw: Any) -> Settings:
     if r.problems:
         raise SettingsError(r.problems)
     return Settings(display, DesignSpace(tuple(ingredients)), Specifications(dissolution, hardness),
-                    Cell(tuple(steps), measurement_step), run, people, noise, ScriptedFaults(purge, tuple(events)), comparison, engine)
+                    Cell(tuple(steps), measurement_step, phases), run, people, noise, ScriptedFaults(purge, tuple(events)), comparison, engine)

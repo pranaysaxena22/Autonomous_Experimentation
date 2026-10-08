@@ -20,10 +20,14 @@ def _scaled(formulation: Formulation) -> tuple[float, float, float, float, float
     return tuple((v[k] - _CENTRE[k]) / _HALF[k] for k in _CENTRE)  # type: ignore[return-value]
 
 
-def true_dissolution_pct(formulation: Formulation) -> float:
-    """Dissolution at 30 minutes, with no measurement noise."""
+def true_dissolution_pct(formulation: Formulation, offset: float = 0.0) -> float:
+    """Dissolution at 30 minutes, with no measurement noise.
+
+    `offset` shifts the whole dissolution surface up or down. It exists only so the same
+    truth can be made easier or harder (more or fewer recipes truly good) for sensitivity runs.
+    """
     d, f, b, s, l = _scaled(formulation)
-    value = (73.5
+    value = (73.5 + offset
              + 9.0 * s - 3.0 * s * s      # disintegrant helps, with diminishing returns
              - 7.0 * b                     # binder slows release
              - 5.0 * l                     # lubricant is water-repellent

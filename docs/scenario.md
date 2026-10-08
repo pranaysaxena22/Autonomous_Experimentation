@@ -37,6 +37,12 @@ Every trial passes through these steps, one after another:
 
 One trial therefore takes **4 hours** from start to finish.
 
+The cell describes each trial in four phases (Sense, Reason, Act, Adapt):
+- **Act** - making the tablets: dispense, blend, press.
+- **Sense** - measuring them: test.
+- **Reason** - the first 30 minutes of the clean step: the decision engine reviews every result so far and chooses the next recipe.
+- **Adapt** - the rest of the clean step: the cell finishes up and loads the next recipe.
+
 ## The run
 - Starts **Friday 09 October 2026, 18:00** and lasts **120 hours**, ending Wednesday 14 October 2026, 18:00.
 - People are in the lab only on **Monday and Tuesday, 08:00-18:00**.
@@ -46,6 +52,12 @@ One trial therefore takes **4 hours** from start to finish.
 ## Faults that happen on purpose
 - **Trial 8** fails at the dispense step (binder dispenser clog). The cell purges for 60 minutes, retries, and carries on.
 - **Trial 19** fails at the dispense step (binder dispenser clog). The cell purges for 60 minutes and retries, but the retry also fails, so that candidate is skipped and an alert is logged.
+
+How a fault plays out in time (these are modelling assumptions, stated so they are never a surprise):
+- A failed attempt takes the step's full duration and is found to have failed at the end of it.
+- The cell then purges for 60 minutes and retries the step for its full duration.
+- If the retry fails, the candidate is skipped: no later step runs, no cleaning is done, no result exists, and the next candidate starts immediately. An alert is queued for the next time staff are in the lab.
+- A trial is started only if all of it, including its scripted delays, fits before the run ends. Nothing is adjusted to reach a particular number of trials, so a small change to a purge time can change how many trials fit.
 
 ## The headline comparison
 - **Adaptive vs fixed list:** 40 repeated campaigns of 30 trials each, to show the cell's learning beats a pre-written list of experiments.
@@ -62,6 +74,8 @@ One trial therefore takes **4 hours** from start to finish.
 - **Ingredients are not forced to sum to 100%.** Each of the five percentages is varied independently within its own range, so a recipe's ingredients can add up to more or less than 100%. A real design space would normally fix one ingredient (often the filler) as the remainder.
 - **The tablet behaviour is a made-up placeholder.** The virtual lab's hidden truth is a smooth illustrative model, not real pharmaceutical data.
 - **The hidden truth is smooth,** which favours a strategy that learns a model of it. Real formulation data would be rougher, so the size of the adaptive strategy's lead here is illustrative, not a prediction.
+- **A symptom of that smoothness:** in the default 40-campaign comparison the adaptive strategy typically finds its first good recipe within one or two choices after its six starting recipes, so its median and its 75th-percentile trial coincide. A model fitted to six results is already enough to point at the good region of a smooth surface; a rougher real surface would take longer to learn.
+- **Charts work offline, fonts may not.** The chart library is bundled into each generated page, but Open Sans is only used if it is installed on the viewing computer; otherwise the browser shows Arial.
 - **One trial at a time.** The cell never works on two trials at once.
 - **Measurement noise is the only random effect** in the lab. There is no instrument drift, no reagent run-out and no recalibration.
 

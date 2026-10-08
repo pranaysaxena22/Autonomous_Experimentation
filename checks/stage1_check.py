@@ -25,7 +25,7 @@ from cellpoc.settings import DEFAULT_PATH, SettingsError, load_settings, setting
 from cellpoc.virtual_lab import VirtualLab  # noqa: E402
 from cellpoc.virtual_lab import oracle  # noqa: E402
 from checks import architecture, scenario_page  # noqa: E402
-from checks.common import Checklist  # noqa: E402
+from checks.common import Checklist, write_chart_page  # noqa: E402
 
 OUT = ROOT / "runs" / "stage1"
 checklist = Checklist("STAGE 1 CHECK - settings, scenario page, virtual lab")
@@ -211,12 +211,7 @@ def write_files(settings, recipes, best, best_margin):
 
     page = (alt.vconcat(chart1, alt.hconcat(chart2, chart3)).configure(font=font)
             .configure_title(font=font, color="#333", fontSize=14))
-    html_path = OUT / "lab_report.html"
-    page.save(str(html_path))
-    banner = (f'<div style="font-family:\'{font}\',Arial,sans-serif;background:{green};color:#000;padding:10px 16px;'
-              f'font-weight:600">{settings.display.banner}</div>')
-    html = html_path.read_text(encoding="utf-8").replace("<body>", "<body>" + banner, 1)
-    html_path.write_text(html, encoding="utf-8")
+    write_chart_page(page, OUT / "lab_report.html", settings.display.banner, green, font)
 
 
 def main() -> int:

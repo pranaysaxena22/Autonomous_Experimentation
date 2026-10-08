@@ -39,6 +39,11 @@ specifications:
 # ---- The cell: steps every trial goes through, in order
 cell:
   measurement_step: "test"       # the result becomes known when this step finishes
+  phases:                        # how each trial is described: Sense / Reason / Act / Adapt
+    act: ["dispense", "blend", "press"]   # Act = making the tablets
+    sense: ["test"]                       # Sense = measuring them
+    reason_adapt_step: "clean"            # Reason and Adapt happen during this step (it must be the last step)
+    reason_minutes: 30                    # the first part is Reason, the rest is Adapt
   steps:
     - { name: "dispense", label: "Dispense", duration_minutes: 30 }
     - { name: "blend",    label: "Blend",    duration_minutes: 45 }
