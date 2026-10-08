@@ -24,19 +24,13 @@ from cellpoc.contracts import Formulation, meets_spec  # noqa: E402
 from cellpoc.settings import DEFAULT_PATH, SettingsError, load_settings, settings_from_dict  # noqa: E402
 from cellpoc.virtual_lab import VirtualLab  # noqa: E402
 from cellpoc.virtual_lab import oracle  # noqa: E402
-from checks import scenario_page  # noqa: E402
+from checks import architecture, scenario_page  # noqa: E402
+from checks.common import Checklist  # noqa: E402
 
 OUT = ROOT / "runs" / "stage1"
-results: list[tuple[str, str, str]] = []
+checklist = Checklist("STAGE 1 CHECK - settings, scenario page, virtual lab")
+record = checklist.record
 PASS_SHARE: list[float] = []
-
-
-def record(ok: bool, what: str, detail: str = "") -> None:
-    results.append(("PASS" if ok else "FAIL", what, detail))
-
-
-def skip(what: str, detail: str) -> None:
-    results.append(("SKIP", what, detail))
 
 
 # ---------------------------------------------------------------- settings
@@ -158,29 +152,6 @@ def check_lab(settings):
     return recipes, best, best_margin, fraction
 
 
-def check_truth_boundary():
-    """The decision engine and dashboard must never touch the lab's hidden truth or the scoring oracle."""
-    package = ROOT / "cellpoc"
-    leaks, scanned = [], 0
-    for path in package.rglob("*.py"):
-        text = path.read_text(encoding="utf-8")
-        rel = path.relative_to(package)
-        part = rel.parts[0]
-        if part == "virtual_lab":
-            continue
-        scanned += 1
-        if "_truth" in text or "virtual_lab.oracle" in text or "import oracle" in text:
-            leaks.append(f"{rel} reaches the hidden truth")
-        if part in ("decision_engine", "dashboard") and "virtual_lab" in text:
-            leaks.append(f"{rel} imports the virtual lab")
-    record(not leaks, "Nothing outside the virtual lab can see the hidden truth",
-           "; ".join(leaks) if leaks else f"{scanned} source files outside the lab scanned")
-    missing = [p for p in ("decision_engine", "dashboard") if not (package / p).exists()]
-    if missing:
-        skip("The decision engine and dashboard never import the virtual lab",
-             f"{' and '.join(missing)} not built yet; this check starts guarding them when they exist")
-
-
 # ---------------------------------------------------------------- files to look at
 def write_files(settings, recipes, best, best_margin):
     OUT.mkdir(parents=True, exist_ok=True)
@@ -252,34 +223,17 @@ def main() -> int:
     settings = check_settings()
     check_bad_settings_are_explained()
     if settings is None:
-        print_report()
-        return 1
+        return checklist.print()
     recipes, best, best_margin, fraction = check_lab(settings)
-    check_truth_boundary()
+    architecture.check(checklist)
     page = scenario_page.write(settings)
     record(page.exists(), "The scenario page was written", str(page.relative_to(ROOT)))
     write_files(settings, recipes, best, best_margin)
     record((OUT / "lab_report.html").exists() and (OUT / "lab_measurements.csv").exists(),
            "The lab report and the measurements spreadsheet were written", str(OUT.relative_to(ROOT)))
-    return print_report()
-
-
-def print_report() -> int:
-    print()
-    print("STAGE 1 CHECK - settings, scenario page, virtual lab")
-    print("=" * 60)
-    for status, what, detail in results:
-        print(f"[{status}] {what}")
-        if detail:
-            print(f"        {detail}")
     if PASS_SHARE:
-        print(f"HEADLINE: {PASS_SHARE[0]:.1%} of random recipes are truly good (target: about 3%, allowed 2%-5%)")
-        print("-" * 60)
-    failed = sum(1 for status, _, _ in results if status == "FAIL")
-    passed = sum(1 for status, _, _ in results if status == "PASS")
-    print("=" * 60)
-    print(f"{passed} passed, {failed} failed." + ("  ALL GOOD." if not failed else "  SOMETHING NEEDS ATTENTION."))
-    return 1 if failed else 0
+        checklist.headline(f"{PASS_SHARE[0]:.1%} of random recipes are truly good (target: about 3%, allowed 2%-5%)")
+    return checklist.print()
 
 
 if __name__ == "__main__":

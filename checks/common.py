@@ -1,0 +1,47 @@
+"""Shared plumbing for the stage health checks: a PASS/FAIL list printed in plain words."""
+from __future__ import annotations
+
+from pathlib import Path
+
+
+def write_chart_page(chart, path: Path, banner: str, accent: str, font: str) -> None:
+    """Save an Altair chart as a stand-alone web page with the 'illustrative values' banner on top."""
+    chart.save(str(path))
+    bar = (f'<div style="font-family:\'{font}\',Arial,sans-serif;background:{accent};color:#000;'
+           f'padding:10px 16px;font-weight:600">{banner}</div>')
+    path.write_text(path.read_text(encoding="utf-8").replace("<body>", "<body>" + bar, 1), encoding="utf-8")
+
+
+class Checklist:
+    def __init__(self, title: str):
+        self.title = title
+        self.rows: list[tuple[str, str, str]] = []
+        self.headlines: list[str] = []
+
+    def record(self, ok: bool, what: str, detail: str = "") -> bool:
+        self.rows.append(("PASS" if ok else "FAIL", what, detail))
+        return ok
+
+    def skip(self, what: str, detail: str) -> None:
+        self.rows.append(("SKIP", what, detail))
+
+    def headline(self, text: str) -> None:
+        self.headlines.append(text)
+
+    def print(self) -> int:
+        print()
+        print(self.title)
+        print("=" * 60)
+        for status, what, detail in self.rows:
+            print(f"[{status}] {what}")
+            if detail:
+                print(f"        {detail}")
+        print("=" * 60)
+        for line in self.headlines:
+            print(f"HEADLINE: {line}")
+        if self.headlines:
+            print("-" * 60)
+        failed = sum(1 for status, _, _ in self.rows if status == "FAIL")
+        passed = sum(1 for status, _, _ in self.rows if status == "PASS")
+        print(f"{passed} passed, {failed} failed." + ("  ALL GOOD." if not failed else "  SOMETHING NEEDS ATTENTION."))
+        return 1 if failed else 0

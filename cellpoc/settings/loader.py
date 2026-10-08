@@ -136,7 +136,8 @@ def settings_from_dict(raw: Any) -> Settings:
 
     # cell steps
     steps = []
-    steps_raw = r.section(raw, "cell", "").get("steps")
+    cell_raw = r.section(raw, "cell", "")
+    steps_raw = cell_raw.get("steps")
     if not isinstance(steps_raw, list) or not steps_raw:
         r.problem("cell > steps", "expected a list of steps (dispense, blend, ...).")
         steps_raw = []
@@ -148,6 +149,9 @@ def settings_from_dict(raw: Any) -> Settings:
     names = [s.name for s in steps]
     if len(set(names)) != len(names):
         r.problem("cell > steps", "two steps have the same name; each name must be unique.")
+    measurement_step = r.text(cell_raw, "measurement_step", "cell")
+    if measurement_step and measurement_step not in names:
+        r.problem("cell > measurement_step", f"'{measurement_step}' is not one of the cell steps ({', '.join(names)}).")
 
     # run
     run_raw = r.section(raw, "run", "")
@@ -221,4 +225,4 @@ def settings_from_dict(raw: Any) -> Settings:
     if r.problems:
         raise SettingsError(r.problems)
     return Settings(display, DesignSpace(tuple(ingredients)), Specifications(dissolution, hardness),
-                    Cell(tuple(steps)), run, people, noise, ScriptedFaults(purge, tuple(events)), comparison)
+                    Cell(tuple(steps), measurement_step), run, people, noise, ScriptedFaults(purge, tuple(events)), comparison)

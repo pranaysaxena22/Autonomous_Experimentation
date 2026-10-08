@@ -16,6 +16,9 @@ Double-click `check_stage1.bat`. It prints a PASS/FAIL list in plain words and w
 `docs\scenario.md`, `runs\stage1\lab_report.html` and `runs\stage1\lab_measurements.csv`.
 All tunable numbers are in `config\settings.yaml`.
 
+Stage 2: double-click `check_stage2.bat`. It runs the simulated cell for the full 120 hours on a fixed
+list of recipes and writes `runs\stage2\timeline.html`, `event_log.csv`, `trials.csv` and `record.json`.
+
 ## Add a library
 
     .venv\Scripts\python.exe -m pip install <package>

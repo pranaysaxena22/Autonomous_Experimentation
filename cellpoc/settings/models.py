@@ -63,6 +63,7 @@ class Step:
 @dataclass(frozen=True)
 class Cell:
     steps: tuple[Step, ...]
+    measurement_step: str
 
     @property
     def minutes_per_trial(self) -> float:

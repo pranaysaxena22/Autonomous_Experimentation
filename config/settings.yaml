@@ -38,6 +38,7 @@ specifications:
 
 # ---- The cell: steps every trial goes through, in order
 cell:
+  measurement_step: "test"       # the result becomes known when this step finishes
   steps:
     - { name: "dispense", label: "Dispense", duration_minutes: 30 }
     - { name: "blend",    label: "Blend",    duration_minutes: 45 }
