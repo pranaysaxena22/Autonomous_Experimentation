@@ -1,0 +1,14 @@
+# Virtual environment (recreate with requirements.txt)
+.venv/
+
+# Python caches
+__pycache__/
+*.pyc
+
+# Streamlit secrets (never commit passwords/keys)
+.streamlit/secrets.toml
+
+# Editor / OS files
+.vscode/
+.DS_Store
+Thumbs.db
