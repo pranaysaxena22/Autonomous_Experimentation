@@ -20,11 +20,26 @@ LEVELS = (
 )
 
 
+def _lead(strategies: list[DifficultyStrategyResult]) -> tuple[float, str, float, str]:
+    """Adaptive's lead over the best of the other strategies, and which baseline that is (both, when they tie)."""
+    adaptive = next(s for s in strategies if s.label == "Adaptive")
+    others = [s for s in strategies if s.label != "Adaptive"]
+    best = max(s.found_pct for s in others)
+    names = [s.label for s in others if s.found_pct == best]
+    against = " and ".join(names)
+    points = adaptive.found_pct - best
+    text = (f"{points:+.0f} points over {against} ({best:.0f}% found one)" if len(names) == 1
+            else f"{points:+.0f} points over {against} (tied: {best:.0f}% found one)")
+    return points, against, best, text
+
+
 def _row(level: str, share: float, result: ComparisonResult) -> DifficultyRow:
-    return DifficultyRow(level, round(100 * share, 1), [
+    strategies = [
         DifficultyStrategyResult(s.label, s.truly_good.found_pct, s.truly_good.median_trial,
                                  s.truly_good.trial_by_25pct, s.truly_good.trial_by_75pct)
-        for s in result.strategies if s.key in ("adaptive", "fixed-list", "random")])
+        for s in result.strategies if s.key in ("adaptive", "fixed-list", "random")]
+    points, against, against_pct, text = _lead(strategies)
+    return DifficultyRow(level, round(100 * share, 1), strategies, points, against, against_pct, text)
 
 
 def difficulty_table(settings: Settings, default_result: ComparisonResult | None = None) -> list[DifficultyRow]:

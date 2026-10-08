@@ -37,11 +37,13 @@ Every trial passes through these steps, one after another:
 
 One trial therefore takes **4 hours** from start to finish.
 
-The cell describes each trial in four phases (Sense, Reason, Act, Adapt):
-- **Act** - making the tablets: dispense, blend, press.
-- **Sense** - measuring them: test.
+The cell describes each trial in four phases (Sense, Reason, Act, Adapt), a loop that repeats for every trial:
+- **Sense** - measuring the tablets: test.
 - **Reason** - the first 30 minutes of the clean step: the decision engine reviews every result so far and chooses the next recipe.
+- **Act** - making the tablets: dispense, blend, press.
 - **Adapt** - the rest of the clean step: the cell finishes up and loads the next recipe.
+
+(Within a single trial the phases happen in the order Act, Sense, Reason, Adapt; the list above follows the use-case library's naming.)
 
 ## The run
 - Starts **Friday 09 October 2026, 18:00** and lasts **120 hours**, ending Wednesday 14 October 2026, 18:00.

@@ -25,11 +25,13 @@ performs, and the check allows exactly one division in exactly that file.
 
 ## The pages
 1. **The run** - a time slider with Previous event and Next event buttons. At the chosen moment: each station's
-   status, whether anyone is in the lab, the current trial's recipe and why-text, which of Act / Sense / Reason /
-   Adapt is active, and the result once it is known (never before).
-2. **Timeline** - every trial across the run, night and weekend shading, faults and skips marked.
+   status, whether anyone is in the lab, the current trial's recipe and why-text, which of Sense / Reason / Act /
+   Adapt is active (shown in that order, a loop that repeats every trial), and the result once it is known (never before).
+2. **Timeline** - every trial across the run, night and weekend shading, faults and skips marked. The
+   Sense / Reason / Act / Adapt-over-time view is open by default; the station-by-station view is collapsed.
 3. **Overnight handovers** - the ready-made summaries of what happened while nobody was in the lab, and the event log.
-4. **Does learning help?** - the multi-campaign comparison (with or without the scripted faults) and the difficulty table.
+4. **Does learning help?** - the multi-campaign comparison (with or without the scripted faults) and the difficulty
+   table. Every percentage-point gap names the baseline it is measured against (the better of the other two strategies at that difficulty).
 5. **Throughput** - autonomous against a manual baseline you can edit.
 6. **What this shows** - what the simulation shows and does not show (the same text as the scenario page's Limitations).
 

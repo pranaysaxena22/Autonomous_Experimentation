@@ -40,6 +40,7 @@ def render(record) -> None:
                         f'<div class="tile-text">{station.text}</div></div>', unsafe_allow_html=True)
 
     st.markdown("#### Sense / Reason / Act / Adapt")
+    st.caption("These four phases form a loop that repeats for every trial. The highlighted box is the phase the cell is in at this moment.")
     for column, phase in zip(st.columns(len(now.phases)), now.phases):
         column.markdown(f'<div class="phase phase-{phase.state}">{PHASE_TITLES[phase.phase]}</div>', unsafe_allow_html=True)
     for phase in now.phases:

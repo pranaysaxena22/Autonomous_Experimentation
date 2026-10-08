@@ -14,7 +14,9 @@ from ..contracts import (
 )
 from .clock import RunClock
 
-PHASES = ("Act", "Sense", "Reason", "Adapt")
+# The order the dashboard shows the four phases in (matching the use-case library). A trial's own
+# `phases` list stays in the order things happen in time: Act, Sense, Reason, Adapt.
+PHASES = ("Sense", "Reason", "Act", "Adapt")
 RECENT = 5
 
 

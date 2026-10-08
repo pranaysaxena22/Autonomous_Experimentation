@@ -239,7 +239,7 @@ class _Simulation:
         reason_end = s + self.cfg.reason_minutes
         self.log(s, "step_started", f"Trial {trial}: {step.label} started" + (" (after the skipped candidate)." if after_skip else "."),
                  trial, step.name)
-        text = (f"{step.label}: cleaning after the skipped candidate (trial {trial})" if after_skip
+        text = (f"Cleaning after the skipped candidate (trial {trial})" if after_skip
                 else f"{step.label}: trial {trial}")
         intervals.append(self.interval(step, step.label, "step", "completed", s, e, "working", text))
         if self.fits(e, trial + 1):

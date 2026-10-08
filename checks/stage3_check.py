@@ -162,6 +162,17 @@ def check_difficulty(settings, result):
     adaptive_row = [s for s in default.strategies if s.label == "Adaptive"][0]
     record(adaptive_row.found_pct == adaptive_main.found_pct and adaptive_row.median_trial == adaptive_main.median_trial,
            "The 'default' difficulty row is the headline comparison itself (same engine, same seeds, no faults)")
+    ok, shown = True, []
+    for row in rows:
+        found = {s.label: s.found_pct for s in row.strategies}
+        best = max(v for k, v in found.items() if k != "Adaptive")
+        winners = sorted(k for k, v in found.items() if k != "Adaptive" and v == best)
+        ok &= (abs(row.lead_points - (found["Adaptive"] - best)) < 1e-9
+               and sorted(row.lead_against.split(" and ")) == winners
+               and all(name in row.lead_text for name in winners) and "points" in row.lead_text)
+        shown.append(f"{row.level}: {row.lead_text}")
+    record(ok, "Each percentage-point gap names the baseline it is measured against (the better of the other two strategies; both if tied), "
+               "and matches a fresh recount", " | ".join(shown))
 
 
 def check_pairing_and_scoring(settings):
@@ -235,6 +246,8 @@ def summary_lines(result):
             for i, s in enumerate(row.strategies):
                 lead = (f"{row.level:<10}{row.good_share_pct:>26.1f}%" if i == 0 else " " * 37)
                 lines.append(f"{lead}{s.label:>13}{percent(s.found_pct):>18}{trial_text(s.median_trial):>14}")
+        lines += ["", "Adaptive's lead, and the baseline it is measured against (the better of the other two strategies):"]
+        lines += [f"  {row.level:<8} {row.lead_text}" for row in result.difficulty]
     return lines
 
 

@@ -17,7 +17,7 @@ LOOK_COLOURS = {
     "Fault: retry failed": "#8B0000",
     "Cleaning after a skipped candidate": "#6C7A89",
 }
-PHASE_COLOURS = {"Act": GREEN, "Sense": "#0097A9", "Reason": "#005587", "Adapt": "#C4D600"}
+PHASE_COLOURS = {"Sense": "#0097A9", "Reason": "#005587", "Act": GREEN, "Adapt": "#C4D600"}
 SHADE_COLOURS = {"Staffed": "#FFFFFF", "Night": "#DDE1E6", "Weekend": "#C3C9D1", "Unattended": "#DDE1E6"}
 STRATEGY_COLOURS = {"Adaptive": GREEN, "Fixed list": "#404040", "Random": "#A0A0A0"}
 

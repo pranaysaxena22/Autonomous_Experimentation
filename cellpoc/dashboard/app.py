@@ -11,12 +11,12 @@ TABS = ["The run", "Timeline", "Overnight handovers", "Does learning help?", "Th
 
 def main() -> None:
     style.apply()
-    record, path = data.load()
+    record, path, problem = data.load()
     if record is None:
         style.banner(style.FALLBACK_BANNER)
         st.title("Autonomous formulation cell")
-        st.warning("There is no run record to show yet. Double-click build_demo.bat (it takes about two minutes), "
-                   f"then reload this page. Looked for: {path}")
+        st.warning(f"{problem} Double-click build_demo.bat (it takes about a minute or two), then reload this page. "
+                   f"Looked for: {path}")
         return
 
     style.banner(record.meta.banner)

@@ -17,10 +17,16 @@ def _read(path: str, saved_at: float):
 
 
 def load():
-    """(the run record or None if there is none yet, the path that was looked at)."""
+    """(the run record or None, the path looked at, a plain-English problem or None).
+
+    A record written by an older version of the program is reported as out of date, not as a crash.
+    """
     path = Path(os.environ.get("CELLPOC_RECORD", str(DEFAULT_RECORD)))
     if path.is_dir():
         path = path.joinpath(run_store.store.RECORD_NAME)
     if not path.exists():
-        return None, path
-    return _read(str(path), path.stat().st_mtime), path
+        return None, path, "There is no run record to show yet."
+    try:
+        return _read(str(path), path.stat().st_mtime), path, None
+    except Exception:  # noqa: BLE001 - any failure to read means the file is unusable
+        return None, path, "The run record on disk is out of date or damaged (it was probably written by an older version)."

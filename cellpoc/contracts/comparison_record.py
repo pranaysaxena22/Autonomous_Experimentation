@@ -54,6 +54,10 @@ class DifficultyRow:
     level: str                        # "Harder", "Default", "Easier"
     good_share_pct: float             # % of random recipes that are truly good at this level
     strategies: list[DifficultyStrategyResult]
+    lead_points: float                # adaptive's found-% minus the best other strategy's, in percentage points
+    lead_against: str                 # which baseline that is: "Fixed list", "Random", or both when they tie
+    lead_against_pct: float           # that baseline's found-%
+    lead_text: str                    # ready to show, e.g. "+28 points over Random (72% found one)"
 
 
 @dataclass

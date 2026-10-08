@@ -57,17 +57,13 @@ def limitations(settings: Settings, default_run: RunRecord, other_run: RunRecord
 def _comparison_note(comparison: ComparisonResult | None) -> str:
     if comparison is None or not comparison.difficulty:
         return "The comparison has not been run for this record."
-    gaps = []
-    for row in comparison.difficulty:
-        adaptive = next(s for s in row.strategies if s.label == "Adaptive")
-        others = [s.found_pct for s in row.strategies if s.label != "Adaptive"]
-        gaps.append((row.level, row.good_share_pct, adaptive.found_pct - max(others)))
-    detail = "; ".join(f"{level} ({share:g}% of random recipes truly good): {gap:+.0f} points" for level, share, gap in gaps)
-    shrinks = all(a[2] >= b[2] for a, b in zip(gaps, gaps[1:]))
+    rows = comparison.difficulty
+    detail = "; ".join(f"{row.level} ({row.good_share_pct:g}% of random recipes truly good): {row.lead_text}" for row in rows)
+    shrinks = all(a.lead_points >= b.lead_points for a, b in zip(rows, rows[1:]))
     lead = ("The advantage of learning shrinks when good recipes are common: when almost any recipe works, there is little left to learn. "
             if shrinks else "In this data the advantage of learning does not steadily shrink as good recipes become common. ")
-    return (lead + "Adaptive's lead over the better of the other two strategies, in percentage points of campaigns that found "
-            f"a good recipe within {comparison.trials_per_campaign} trials: {detail}.")
+    return (lead + "Adaptive's lead is measured against whichever other strategy did better at that difficulty, in percentage "
+            f"points of campaigns that found a good recipe within {comparison.trials_per_campaign} trials: {detail}.")
 
 
 def build_about(settings: Settings, default_run: RunRecord, other_run: RunRecord,

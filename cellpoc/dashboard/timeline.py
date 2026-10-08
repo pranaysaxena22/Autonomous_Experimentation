@@ -52,9 +52,10 @@ def render(record) -> None:
                            for t in record.trials for p in t.phases])
     phase_chart = alt.Chart(phases).mark_bar(height=14).encode(
         x=alt.X("Start:T", title="Date and time"), x2="End:T",
-        y=alt.Y("Phase:N", title=None, sort=["Act", "Sense", "Reason", "Adapt"]),
+        y=alt.Y("Phase:N", title=None, sort=["Sense", "Reason", "Act", "Adapt"]),
         color=alt.Color("Phase:N", scale=alt.Scale(domain=list(style.PHASE_COLOURS), range=list(style.PHASE_COLOURS.values()))),
         tooltip=["Trial", "Phase", "Start", "End", "What it did"]).properties(
-        height=170, title="Act, Sense, Reason, Adapt for every trial (hover for what each did)")
-    with st.expander("Sense / Reason / Act / Adapt over time", expanded=False):
+        height=170, title="Sense, Reason, Act, Adapt for every trial (hover for what each did)")
+    with st.expander("Sense / Reason / Act / Adapt over time", expanded=True):
+        st.caption("A loop that repeats for every trial.")
         style.chart(phase_chart)

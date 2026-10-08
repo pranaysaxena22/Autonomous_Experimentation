@@ -71,5 +71,13 @@ def render(record) -> None:
                          "Median trial": _when(strategy.median_trial, limit)})
     st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
     st.caption("Same comparison, same seeds and same engine, without faults, on an easier and a harder version of the hidden truth.")
+    st.markdown("**Adaptive's lead, and the baseline it is measured against**")
+    st.dataframe(pd.DataFrame([{"Difficulty": row.level, "Random recipes that are truly good": f"{row.good_share_pct:g}%",
+                                "Adaptive's lead (percentage points)": f"{row.lead_points:+.0f}",
+                                "Measured against": row.lead_against,
+                                "That baseline found one in": f"{row.lead_against_pct:.0f}% of campaigns",
+                                "In words": row.lead_text} for row in comparison.difficulty]),
+                 hide_index=True, width="stretch")
+    st.caption("The baseline is whichever of the other two strategies did better at that difficulty; if they tie, both are named.")
     if record.about is not None:
         st.info(record.about.comparison_note)

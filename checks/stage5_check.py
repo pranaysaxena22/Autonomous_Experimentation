@@ -94,7 +94,7 @@ def check_snapshots(settings, run):
         active = [p.phase for p in t.phases if p.start_minute <= s.minute < p.end_minute]
         if (s.active_phase or None) != (active[0] if active else None):
             phase_bad.append(s.when)
-        if [p.phase for p in s.phases] != ["Act", "Sense", "Reason", "Adapt"]:
+        if [p.phase for p in s.phases] != ["Sense", "Reason", "Act", "Adapt"]:
             phase_bad.append(s.when)
     record(not phase_bad, "The active phase (Act, Sense, Reason or Adapt) at every stop matches the trial's recorded phases")
 
@@ -172,6 +172,17 @@ def check_dashboard_pages(settings, run):
            "'Simulation with illustrative values' is shown at the top of the dashboard and again on every page",
            f"{len(stamps)} page stamps")
 
+    page_text = "\n".join(m.value for m in app.markdown)
+    boxes = re.findall(r'class="phase phase-\w+">(\w+)<', page_text)
+    record(boxes == ["SENSE", "REASON", "ACT", "ADAPT"],
+           "The four phases are shown in the order Sense, Reason, Act, Adapt", " > ".join(boxes))
+    record(any("loop that repeats for every trial" in c.value for c in app.caption),
+           "A one-line note says the phases form a loop that repeats every trial")
+    expanders = {e.label: e.proto.expanded for e in app.expander}
+    record(expanders.get("Sense / Reason / Act / Adapt over time") is True and expanders.get("Station by station") is False,
+           "On the Timeline page the phases-over-time view is open by default and the station-by-station view is collapsed",
+           f"phases view open: {expanders.get('Sense / Reason / Act / Adapt over time')}; station view open: {expanders.get('Station by station')}")
+
     snaps = run.snapshots
     slider = app.select_slider[0]
     record(len(slider.options) == len(snaps) and app.button(key="previous_event").disabled and not app.button(key="next_event").disabled,
@@ -211,7 +222,7 @@ def check_dashboard_pages(settings, run):
     t19 = sched[19]
     retry19_end = t19.start_minute + 30 + 60 + 30
     page = go(at_minute(retry19_end + 15).index)
-    record("cleaning after the skipped candidate (trial 19)" in page and "Waiting for staff, queued for" in page
+    record("Cleaning after the skipped candidate (trial 19)" in page and "Waiting for staff, queued for" in page
            and any("No result" in e.value or "skipped" in e.value for e in app.error),
            "After trial 19's failed retry: the cleaning tile says it is cleaning after the skipped candidate, the alert waits for staff, the result says no result")
 
@@ -248,6 +259,19 @@ def check_dashboard_pages(settings, run):
     record(bool(diff) and len(diff[0]) == 9 and run.about is not None and run.about.comparison_note in [i.value for i in app.info],
            "The difficulty table (3 levels x 3 strategies) and the plain-language note about the advantage shrinking are shown",
            run.about.comparison_note[:110] + "...")
+    leads = [d.value for d in app.dataframe if "Measured against" in list(d.value.columns)]
+    found = {r.level: {s.label: s.found_pct for s in r.strategies} for r in run.comparison.difficulty}
+    expect_ok = bool(leads) and len(leads[0]) == 3
+    for _, line in (leads[0].iterrows() if leads else []):
+        pct = found[line["Difficulty"]]
+        best = max(v for k, v in pct.items() if k != "Adaptive")
+        winners = sorted(k for k, v in pct.items() if k != "Adaptive" and v == best)
+        expect_ok &= (sorted(line["Measured against"].split(" and ")) == winners
+                      and line["Adaptive's lead (percentage points)"] == f"{pct['Adaptive'] - best:+.0f}")
+    note = run.about.comparison_note
+    record(expect_ok and "Fixed list" in note and "Random" in note and "measured against" in note,
+           "Next to each percentage-point gap the page names the baseline it is measured against (in a table and in the plain-language note)",
+           "; ".join(f"{r.level}: {r.lead_text}" for r in run.comparison.difficulty))
     app.radio[0].set_value("With the scripted faults applied to every strategy").run()
     record(not app.exception and any("Scripted faults were applied" in m.value or "scripted faults" in m.value.lower() for m in app.markdown),
            "Switching the comparison to 'with faults' works and says faults were applied")
@@ -273,6 +297,29 @@ def check_dashboard_pages(settings, run):
     record("margin" in about_text, "The Limitations include the note that the count depends on a small timing margin")
     charts = [e for e in app.get("arrow_vega_lite_chart")] + [e for e in app.get("vega_lite_chart")]
     record(len(charts) >= 6, "The charts are drawn (timeline x3, comparison x2, throughput x1)", f"{len(charts)} charts")
+
+
+def check_friendly_errors():
+    """If the record is missing or out of date, the dashboard must say so plainly, not crash."""
+    from streamlit.testing.v1 import AppTest
+
+    broken = OUT / "_broken_record"
+    broken.mkdir(parents=True, exist_ok=True)
+    (broken / "record.json").write_text('{"meta": {"run_id": "old"}}', encoding="utf-8")
+    results = {}
+    for name, target in (("damaged", broken), ("missing", OUT / "_no_such_folder")):
+        os.environ["CELLPOC_RECORD"] = str(target)
+        app = AppTest.from_file(str(ROOT / "app.py"), default_timeout=60)
+        app.run()
+        results[name] = (not app.exception, " ".join(w.value for w in app.warning),
+                         any('<div class="sim-banner">' in m.value for m in app.markdown))
+    os.environ.pop("CELLPOC_RECORD", None)
+    record(results["damaged"][0] and "out of date" in results["damaged"][1] and "build_demo.bat" in results["damaged"][1]
+           and results["damaged"][2],
+           "A damaged or out-of-date run record gives a plain message telling you to run build_demo.bat (and the banner still shows), not a crash")
+    record(results["missing"][0] and "no run record" in results["missing"][1].lower() and "build_demo.bat" in results["missing"][1]
+           and results["missing"][2],
+           "A missing run record gives a plain message telling you to run build_demo.bat (and the banner still shows), not a crash")
 
 
 # ------------------------------------------------------------------ the real server
@@ -356,6 +403,7 @@ def main() -> int:
     check_snapshots(settings, run)
     print("Driving the dashboard through its pages...", flush=True)
     check_dashboard_pages(settings, run)
+    check_friendly_errors()
     check_server()
     check_sources()
 

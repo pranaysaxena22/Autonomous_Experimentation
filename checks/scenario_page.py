@@ -87,11 +87,13 @@ Every trial passes through these steps, one after another:
 
 One trial therefore takes **{trial_hours:g} hours** from start to finish.
 
-The cell describes each trial in four phases (Sense, Reason, Act, Adapt):
-- **Act** - making the tablets: {", ".join(s.cell.phases.act)}.
-- **Sense** - measuring them: {", ".join(s.cell.phases.sense)}.
+The cell describes each trial in four phases (Sense, Reason, Act, Adapt), a loop that repeats for every trial:
+- **Sense** - measuring the tablets: {", ".join(s.cell.phases.sense)}.
 - **Reason** - the first {s.cell.phases.reason_minutes:g} minutes of the {s.cell.phases.reason_adapt_step} step: the decision engine reviews every result so far and chooses the next recipe.
+- **Act** - making the tablets: {", ".join(s.cell.phases.act)}.
 - **Adapt** - the rest of the {s.cell.phases.reason_adapt_step} step: the cell finishes up and loads the next recipe.
+
+(Within a single trial the phases happen in the order Act, Sense, Reason, Adapt; the list above follows the use-case library's naming.)
 
 ## The run
 - Starts **{DAY_NAMES[s.run.start.weekday()]} {s.run.start:%d %B %Y}, {s.run.start:%H:%M}** and lasts **{s.run.duration_hours:g} hours**, ending {DAY_NAMES[end.weekday()]} {end:%d %B %Y}, {end:%H:%M}.
