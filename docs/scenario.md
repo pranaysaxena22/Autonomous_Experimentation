@@ -44,8 +44,8 @@ One trial therefore takes **4 hours** from start to finish.
 - Running one trial at a time, the cell completes 30 trials in the run.
 
 ## Faults that happen on purpose
-- **Trial 8** fails at the press step. The cell purges for 60 minutes, retries, and carries on.
-- **Trial 19** fails at the press step. The cell purges for 60 minutes and retries, but the retry also fails, so that candidate is skipped and an alert is logged.
+- **Trial 8** fails at the dispense step (binder dispenser clog). The cell purges for 60 minutes, retries, and carries on.
+- **Trial 19** fails at the dispense step (binder dispenser clog). The cell purges for 60 minutes and retries, but the retry also fails, so that candidate is skipped and an alert is logged.
 
 ## The headline comparison
 - **Adaptive vs fixed list:** 40 repeated campaigns of 30 trials each, to show the cell's learning beats a pre-written list of experiments.
@@ -57,3 +57,15 @@ One trial therefore takes **4 hours** from start to finish.
 3. **Cell simulator** - runs the clock, the steps, the faults and the event log.
 4. **Decision engine** - chooses the next recipe. It sees only measurements, never the hidden truth.
 5. **Dashboard** - displays what happened. It does no calculation of its own.
+
+## Limitations
+- **Ingredients are not forced to sum to 100%.** Each of the five percentages is varied independently within its own range, so a recipe's ingredients can add up to more or less than 100%. A real design space would normally fix one ingredient (often the filler) as the remainder.
+- **The tablet behaviour is a made-up placeholder.** The virtual lab's hidden truth is a smooth illustrative model, not real pharmaceutical data.
+- **One trial at a time.** The cell never works on two trials at once.
+- **Measurement noise is the only random effect** in the lab. There is no instrument drift, no reagent run-out and no recalibration.
+
+## Future extensions
+- **Overlapping trials:** let a new trial start dispensing while the previous one is being tested, to raise the number of trials per run.
+- Instrument drift, reagent run-outs and recalibration.
+- Stop and resume, and runs longer than 120 hours.
+- Running the simulation in a separate process so the dashboard can watch it live.

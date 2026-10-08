@@ -67,13 +67,15 @@ scripted_faults:
   purge_minutes: 60              # time to purge and reset after a failure
   events:
     - trial: 8
-      station: "press"
+      station: "dispense"
+      cause: "binder dispenser clog"
       retry_succeeds: true       # purge, retry, carry on
-      alert: "Press jam on trial 8 - purged and retried successfully"
+      alert: "Binder dispenser clog on trial 8 - purged and retried successfully"
     - trial: 19
-      station: "press"
+      station: "dispense"
+      cause: "binder dispenser clog"
       retry_succeeds: false      # retry also fails: candidate skipped
-      alert: "Press jam on trial 19 - retry failed, candidate skipped"
+      alert: "Binder dispenser clog on trial 19 - retry failed, candidate skipped"
 
 # ---- The headline comparison
 comparison:

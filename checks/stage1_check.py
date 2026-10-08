@@ -28,6 +28,7 @@ from checks import scenario_page  # noqa: E402
 
 OUT = ROOT / "runs" / "stage1"
 results: list[tuple[str, str, str]] = []
+PASS_SHARE: list[float] = []
 
 
 def record(ok: bool, what: str, detail: str = "") -> None:
@@ -61,10 +62,13 @@ def check_settings():
     record(int(s.run.duration_hours * 60 // per_trial) == s.comparison.trials_per_campaign,
            "Running one trial at a time, 120 hours fits exactly the 30 trials in a campaign",
            f"{s.run.duration_hours * 60 / per_trial:g} trials fit; campaign size is {s.comparison.trials_per_campaign}")
-    record([e.trial for e in s.scripted_faults.events] == [8, 19]
-           and [e.retry_succeeds for e in s.scripted_faults.events] == [True, False],
-           "Scripted faults: trial 8 recovers after the purge, trial 19 fails its retry",
-           f"purge {s.scripted_faults.purge_minutes:g} min")
+    faults = s.scripted_faults
+    record([e.trial for e in faults.events] == [8, 19]
+           and [e.retry_succeeds for e in faults.events] == [True, False]
+           and all(e.station == "dispense" for e in faults.events)
+           and faults.purge_minutes == 60,
+           "Scripted faults: both at the dispense step (binder clog); trial 8 recovers after a 1-hour purge, trial 19 fails its retry",
+           f"purge {faults.purge_minutes:g} min")
     record(s.comparison.manual_baseline_trials_per_week == 9, "The manual baseline is 9 trials per week",
            f"{s.comparison.manual_baseline_trials_per_week:g}")
     return settings
@@ -141,8 +145,9 @@ def check_lab(settings):
            f"{bad_passing} of 100 pass; typical dissolution {statistics.mean(r.dissolution_pct for r in bad_readings):.0f}%")
 
     fraction = oracle.feasible_fraction(settings)
-    record(0.05 <= fraction <= 0.30, "The good region is neither trivial nor tiny (between 5% and 30% of recipes)",
+    record(0.02 <= fraction <= 0.05, "The good region is rare: between 2% and 5% of random recipes are truly good",
            f"{fraction:.1%} of random recipes are truly good")
+    PASS_SHARE.append(fraction)
 
     try:
         VirtualLab(settings).measure(1, Formulation(drug=50, filler=55, binder=4, disintegrant=4, lubricant=1))
@@ -267,6 +272,9 @@ def print_report() -> int:
         print(f"[{status}] {what}")
         if detail:
             print(f"        {detail}")
+    if PASS_SHARE:
+        print(f"HEADLINE: {PASS_SHARE[0]:.1%} of random recipes are truly good (target: about 3%, allowed 2%-5%)")
+        print("-" * 60)
     failed = sum(1 for status, _, _ in results if status == "FAIL")
     passed = sum(1 for status, _, _ in results if status == "PASS")
     print("=" * 60)

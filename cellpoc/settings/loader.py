@@ -212,7 +212,8 @@ def settings_from_dict(raw: Any) -> Settings:
         if trial > comparison.trials_per_campaign:
             r.problem(f"{where} > trial",
                       f"trial {trial} is beyond the {comparison.trials_per_campaign} trials in a campaign.")
-        events.append(ScriptedFault(trial, station, bool(retry), r.text(item, "alert", where)))
+        events.append(ScriptedFault(trial, station, r.text(item, "cause", where), bool(retry),
+                                    r.text(item, "alert", where)))
     trial_numbers = [e.trial for e in events]
     if len(set(trial_numbers)) != len(trial_numbers):
         r.problem("scripted_faults > events", "two events target the same trial; use one event per trial.")

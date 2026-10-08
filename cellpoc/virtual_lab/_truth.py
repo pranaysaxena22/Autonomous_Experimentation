@@ -23,7 +23,7 @@ def _scaled(formulation: Formulation) -> tuple[float, float, float, float, float
 def true_dissolution_pct(formulation: Formulation) -> float:
     """Dissolution at 30 minutes, with no measurement noise."""
     d, f, b, s, l = _scaled(formulation)
-    value = (79.0
+    value = (73.5
              + 9.0 * s - 3.0 * s * s      # disintegrant helps, with diminishing returns
              - 7.0 * b                     # binder slows release
              - 5.0 * l                     # lubricant is water-repellent

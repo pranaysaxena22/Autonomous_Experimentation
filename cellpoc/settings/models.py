@@ -93,6 +93,7 @@ class Noise:
 class ScriptedFault:
     trial: int
     station: str
+    cause: str
     retry_succeeds: bool
     alert: str
 
