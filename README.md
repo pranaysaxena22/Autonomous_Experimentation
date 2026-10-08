@@ -1,31 +1,31 @@
 # Cell POC
 
-A Streamlit app.
+A simulated autonomous formulation cell (tablet recipes), with a Streamlit dashboard.
+**Simulation with illustrative values** - nothing here is real client data.
 
-## Run it
+## Run the dashboard
 
-Double-click `run.bat`, or in a terminal in this folder:
+Double-click `run.bat`. If the run record does not exist yet it is built first (about a minute); then the
+dashboard opens at http://localhost:8501. It works fully offline. Stop it with Ctrl+C.
+`build_demo.bat` rebuilds the record after you change `config\settings.yaml`. See `docs\dashboard.md`.
 
-    .venv\Scripts\python.exe -m streamlit run app.py
-
-Then open http://localhost:8501 (it usually opens automatically). Stop with Ctrl+C.
+All tunable numbers are in `config\settings.yaml`. The plain-English description of the scenario is
+`docs\scenario.md` (generated from the settings by the checks).
 
 ## Check a stage
 
-Double-click `check_stage1.bat`. It prints a PASS/FAIL list in plain words and writes
-`docs\scenario.md`, `runs\stage1\lab_report.html` and `runs\stage1\lab_measurements.csv`.
-All tunable numbers are in `config\settings.yaml`.
+Each stage has a health check you can double-click. It prints a PASS/FAIL list in plain words.
 
-Stage 2: double-click `check_stage2.bat`. It runs the simulated cell for the full 120 hours on a fixed
-list of recipes and writes `runs\stage2\timeline.html`, `event_log.csv`, `trials.csv` and `record.json`.
+| Stage | Double-click | What it covers | Time |
+|---|---|---|---|
+| 1 | `check_stage1.bat` | settings, scenario page, virtual lab | seconds |
+| 2 | `check_stage2.bat` | the cell simulator on a fixed list | seconds |
+| 3 | `check_stage3.bat` | adaptive engine, 40-campaign comparison, difficulty table | a few minutes |
+| 4 | `check_stage4.bat` | closed-loop run with scripted faults, alerts, overnight summaries | under a minute |
+| 5 | `check_stage5.bat` | the dashboard | a few minutes |
 
-Stage 3: double-click `check_stage3.bat` (takes about a minute). It runs the adaptive engine and the
-40-campaign comparison (fixed list vs adaptive vs random, with and without faults) and writes
-`runs\stage3\comparison_summary.txt`, `comparison.html`, `campaigns.csv` and `demo_event_log.csv`.
-
-Stage 4: double-click `check_stage4.bat`. It runs the closed-loop unattended run with the scripted faults
-and writes `runs\stage4\closed_loop_summary.txt`, `timeline.html`, `trials.csv`, `event_log.csv` and `alerts.csv`.
-It also confirms every generated chart page works with no internet, so run the Stage 1-3 checks first.
+Run them in order the first time: Stage 4 also confirms every generated chart page works with no internet.
+Outputs are written under `runs\` (not saved in git).
 
 ## Add a library
 

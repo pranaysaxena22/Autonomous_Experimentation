@@ -8,6 +8,8 @@ from __future__ import annotations
 from datetime import timedelta
 from pathlib import Path
 
+from cellpoc.about_text import limitations, trial_count_phrase
+from cellpoc.runner import run_closed_loop, run_other_cleaning
 from cellpoc.settings import Settings
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -35,6 +37,12 @@ def build(settings: Settings) -> str:
     day_list = [DAY_NAMES[d] for d in s.people.staffed_weekdays]
     staffed_days = (" and ".join([", ".join(day_list[:-1]), day_list[-1]]) if len(day_list) > 1
                     else (day_list[0] if day_list else "no days"))
+
+    default_run, other_run = run_closed_loop(s), run_other_cleaning(s)   # the numbers below come from real runs
+    trials_phrase = trial_count_phrase(default_run, other_run)
+    limitation_lines = "\n".join(f"- {text}" for text in limitations(s, default_run, other_run))
+    cleaning = ("the cell still does a full cleaning step, with Reason and Adapt as usual, before moving on"
+                if s.scripted_faults.clean_after_skip else "the next candidate starts immediately, with no cleaning")
 
     ingredient_rows = "\n".join(
         f"| {i.label} | {i.min:g}% | {i.max:g}% |" for i in s.design_space.ingredients)
@@ -89,7 +97,7 @@ The cell describes each trial in four phases (Sense, Reason, Act, Adapt):
 - Starts **{DAY_NAMES[s.run.start.weekday()]} {s.run.start:%d %B %Y}, {s.run.start:%H:%M}** and lasts **{s.run.duration_hours:g} hours**, ending {DAY_NAMES[end.weekday()]} {end:%d %B %Y}, {end:%H:%M}.
 - People are in the lab only on **{staffed_days}, {s.people.staffed_from:%H:%M}-{s.people.staffed_until:%H:%M}**.
 - That leaves the cell **unattended for {unattended:g} of the {total:g} hours** of the run.
-- Running one trial at a time, the cell completes {total / trial_hours:g} trials in the run.
+- Running one trial at a time, {trials_phrase} fit in the run once the scripted faults' delays are counted. With the default settings this run attempts {default_run.summary.trials_attempted} ({default_run.summary.trials_with_result} with a result, {default_run.summary.trials_skipped} skipped), which is {default_run.summary.trials_per_week:g} trials with results per week.
 
 ## Faults that happen on purpose
 {fault_lines}
@@ -97,8 +105,8 @@ The cell describes each trial in four phases (Sense, Reason, Act, Adapt):
 How a fault plays out in time (these are modelling assumptions, stated so they are never a surprise):
 - A failed attempt takes the step's full duration and is found to have failed at the end of it.
 - The cell then purges for {s.scripted_faults.purge_minutes:g} minutes and retries the step for its full duration.
-- If the retry fails, the candidate is skipped: no later step runs, no cleaning is done, no result exists, and the next candidate starts immediately. An alert is queued for the next time staff are in the lab.
-- A trial is started only if all of it, including its scripted delays, fits before the run ends. Nothing is adjusted to reach a particular number of trials, so a small change to a purge time can change how many trials fit.
+- If the retry fails, the candidate is skipped: no later step runs and no result exists. An alert is queued for the next time staff are in the lab. After the skip {cleaning} (setting `clean_after_skip`; a clog is when you would clean).
+- A trial is started only if all of it, including its scripted delays, fits before the run ends. Nothing is adjusted to reach a particular number of trials, so a small change to a purge time or the cleaning setting changes how many trials fit.
 
 ## The headline comparison
 - **Adaptive vs fixed list:** {s.comparison.campaigns} repeated campaigns of {s.comparison.trials_per_campaign} trials each, to show the cell's learning beats a pre-written list of experiments.
@@ -112,13 +120,7 @@ How a fault plays out in time (these are modelling assumptions, stated so they a
 5. **Dashboard** - displays what happened. It does no calculation of its own.
 
 ## Limitations
-- **Ingredients are not forced to sum to 100%.** Each of the five percentages is varied independently within its own range, so a recipe's ingredients can add up to more or less than 100%. A real design space would normally fix one ingredient (often the filler) as the remainder.
-- **The tablet behaviour is a made-up placeholder.** The virtual lab's hidden truth is a smooth illustrative model, not real pharmaceutical data.
-- **The hidden truth is smooth,** which favours a strategy that learns a model of it. Real formulation data would be rougher, so the size of the adaptive strategy's lead here is illustrative, not a prediction.
-- **A symptom of that smoothness:** in the default 40-campaign comparison the adaptive strategy typically finds its first good recipe within one or two choices after its six starting recipes, so its median and its 75th-percentile trial coincide. A model fitted to six results is already enough to point at the good region of a smooth surface; a rougher real surface would take longer to learn.
-- **Charts work offline, fonts may not.** The chart library is bundled into each generated page, but Open Sans is only used if it is installed on the viewing computer; otherwise the browser shows Arial.
-- **One trial at a time.** The cell never works on two trials at once.
-- **Measurement noise is the only random effect** in the lab. There is no instrument drift, no reagent run-out and no recalibration.
+{limitation_lines}
 
 ## Future extensions
 - **Overlapping trials:** let a new trial start dispensing while the previous one is being tested, to raise the number of trials per run.

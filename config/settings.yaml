@@ -76,6 +76,7 @@ decision_engine:
 # ---- Faults that happen on purpose (used when the simulator is built)
 scripted_faults:
   purge_minutes: 60              # time to purge and reset after a failure
+  clean_after_skip: true         # after a skipped candidate the cell still does a full cleaning step (a clog is when you'd clean)
   events:
     - trial: 8
       station: "dispense"

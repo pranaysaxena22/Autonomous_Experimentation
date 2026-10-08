@@ -8,8 +8,9 @@ everything in plain English.
 Timing rules for a scripted fault (stated here so they are never a surprise):
   * a failed attempt at a step takes that step's full duration, and is found to have failed at the end;
   * the cell then purges for the settings' purge time, then retries the step for its full duration;
-  * if the retry works the trial carries on; if not, the candidate is skipped: no later step runs,
-    no cleaning is done, no result exists, and the next candidate starts immediately;
+  * if the retry works the trial carries on; if not, the candidate is skipped: no later step runs and
+    no result exists. When the settings' `clean_after_skip` is on (the default) the cell then still does
+    the full cleaning step, with Reason and Adapt as usual; when it is off the next candidate starts at once;
   * a trial is started only if all of it (including its scripted delays) fits before the run ends.
 Nothing is adjusted to reach a particular number of trials: the run simply attempts what fits.
 """
@@ -23,6 +24,7 @@ from ..settings import Settings
 from ..settings.models import ScriptedFault, ScriptedFaults, Step
 from .clock import RunClock
 from .handover import build_handovers
+from .snapshots import build_snapshots
 
 
 def simulate(settings: Settings, lab: Lab, strategy: Strategy, run_id: str,
@@ -61,7 +63,8 @@ class _Simulation:
         if fault.retry_succeeds:
             return nominal + self.purge + step.duration_minutes
         before = sum(s.duration_minutes for s in self.steps[: self.steps.index(step)])
-        return before + step.duration_minutes + self.purge + step.duration_minutes
+        cleaning = self._step(self.cfg.reason_adapt_step).duration_minutes if self.faults.clean_after_skip else 0.0
+        return before + step.duration_minutes + self.purge + step.duration_minutes + cleaning
 
     def fits(self, start: float, trial: int) -> bool:
         return start + self.planned_minutes(trial) <= self.duration
@@ -74,9 +77,24 @@ class _Simulation:
         self.events.append(EventRecord(minute, self.clock.iso(minute), self.clock.when(minute), kind, trial, station,
                                        self.clock.attended(minute), message))
 
-    def interval(self, step: Step, label: str, kind: str, outcome: str, start: float, end: float) -> StepInterval:
+    def interval(self, step: Step, label: str, kind: str, outcome: str, start: float, end: float,
+                 state: str, status_text: str) -> StepInterval:
         return StepInterval(step.name, label, kind, outcome, start, end, self.clock.iso(start), self.clock.iso(end),
-                            self.clock.attended(start))
+                            self.clock.attended(start), state, status_text, look="")
+
+    @staticmethod
+    def classify(intervals: list[StepInterval], outcome: str) -> None:
+        """Tell charts how to colour each stretch, once the trial's outcome is known."""
+        for iv in intervals:
+            if iv.kind == "failed_attempt":
+                iv.look = "Fault: failed attempt"
+            elif iv.kind == "purge":
+                iv.look = "Fault: purge"
+            elif iv.kind == "retry":
+                iv.look = "Fault: retry recovered" if iv.outcome == "completed" else "Fault: retry failed"
+            else:
+                iv.look = {"Good": "Trial measured good", "Not good": "Trial measured not good"}.get(
+                    outcome, "Cleaning after a skipped candidate")
 
     def recipe_text(self, formulation: Formulation) -> str:
         return ", ".join(f"{self.labels[k]} {v:.1f}%" for k, v in formulation.as_dict().items())
@@ -111,9 +129,10 @@ class _Simulation:
         meta = RunMeta(self.run_id, self.settings.display.banner, self.strategy.name, self.strategy.description,
                        self.settings.run.random_seed, self.clock.iso(0), self.clock.iso(self.duration), self.duration,
                        bool(self.faults and self.faults.events))
-        return RunRecord(meta, self.labels, [StepInfo(s.name, s.label, s.duration_minutes) for s in self.steps],
-                         calendar, self.trials, self.events, self.alerts, handovers,
-                         self._summarise(calendar))
+        step_info = [StepInfo(s.name, s.label, s.duration_minutes) for s in self.steps]
+        snapshots = build_snapshots(self.clock, step_info, self.labels, self.trials, self.events, self.alerts)
+        return RunRecord(meta, self.labels, step_info, calendar, self.trials, self.events, self.alerts, handovers,
+                         self._summarise(calendar), snapshots)
 
     def run_trial(self, trial: int, proposal: Proposal) -> None:
         start = self.minute
@@ -136,7 +155,10 @@ class _Simulation:
                 measurement = self.plain_step(trial, step, intervals, proposal.formulation) or measurement
 
         if skipped:
-            self.finish_skipped(trial, proposal, start, intervals, notes)
+            if self.faults is not None and self.faults.clean_after_skip:
+                reason_interval, adapt_interval = self.think_step(
+                    trial, self._step(self.cfg.reason_adapt_step), intervals, after_skip=True)
+            self.finish_skipped(trial, proposal, start, intervals, notes, reason_interval, adapt_interval)
         else:
             assert measurement is not None  # settings validation guarantees the measuring step exists
             self.finish_completed(trial, proposal, start, intervals, notes, measurement, reason_interval, adapt_interval)
@@ -145,7 +167,8 @@ class _Simulation:
     def plain_step(self, trial: int, step: Step, intervals: list[StepInterval], formulation: Formulation) -> Measurement | None:
         s, e = self.minute, self.minute + step.duration_minutes
         self.log(s, "step_started", f"Trial {trial}: {step.label} started.", trial, step.name)
-        intervals.append(self.interval(step, step.label, "step", "completed", s, e))
+        intervals.append(self.interval(step, step.label, "step", "completed", s, e, "working",
+                                       f"{step.label}: trial {trial}"))
         self.minute = e
         self.log(e, "step_finished", f"Trial {trial}: {step.label} finished.", trial, step.name)
         return self.measure_if_due(trial, step, e, formulation)
@@ -168,14 +191,16 @@ class _Simulation:
         s = self.minute
         self.log(s, "step_started", f"Trial {trial}: {step.label} started.", trial, step.name)
         e = s + step.duration_minutes
-        intervals.append(self.interval(step, f"{step.label} - failed attempt", "failed_attempt", "failed", s, e))
+        intervals.append(self.interval(step, f"{step.label} - failed attempt", "failed_attempt", "failed", s, e,
+                                       "working", f"{step.label}: trial {trial}"))
         self.minute = e
         self.log(e, "fault", f"Trial {trial}: FAULT - {cause} at {step.label}. The attempt failed.", trial, step.name)
 
         p_end = e + self.purge
         self.log(e, "purge_started", f"Trial {trial}: purging and resetting {step.label.lower()} ({self.purge:g} min).",
                  trial, step.name)
-        intervals.append(self.interval(step, "Purge", "purge", "completed", e, p_end))
+        intervals.append(self.interval(step, "Purge", "purge", "completed", e, p_end, "purge",
+                                       f"Purging after {cause}: trial {trial}"))
         self.minute = p_end
         self.log(p_end, "purge_finished", f"Trial {trial}: purge finished.", trial, step.name)
 
@@ -183,16 +208,18 @@ class _Simulation:
         self.log(p_end, "step_started", f"Trial {trial}: {step.label} retry started.", trial, step.name)
         self.minute = r_end
         if fault.retry_succeeds:
-            intervals.append(self.interval(step, f"{step.label} - retry", "retry", "completed", p_end, r_end))
+            intervals.append(self.interval(step, f"{step.label} - retry", "retry", "completed", p_end, r_end, "retry",
+                                           f"{step.label} retry after the purge: trial {trial}"))
             self.log(r_end, "recovery", f"Trial {trial}: RECOVERED - the {step.label.lower()} retry succeeded. {fault.alert}.",
                      trial, step.name)
             notes.append(f"{cause.capitalize()} at {step.label}: purged for {self.purge:g} min and retried successfully.")
             self.alerts.append(AlertRecord(r_end, self.clock.iso(r_end), self.clock.when(r_end), trial, "Recovered",
-                                           f"{cause.capitalize()} (recovered)", fault.alert, False, None))
+                                           f"{cause.capitalize()} (recovered)", fault.alert, False, None, None))
             self.log(r_end, "step_finished", f"Trial {trial}: {step.label} finished.", trial, step.name)
             return True
 
-        intervals.append(self.interval(step, f"{step.label} - retry failed", "retry", "failed", p_end, r_end))
+        intervals.append(self.interval(step, f"{step.label} - retry failed", "retry", "failed", p_end, r_end, "retry",
+                                       f"{step.label} retry after the purge: trial {trial}"))
         self.log(r_end, "retry_failed", f"Trial {trial}: the {step.label.lower()} retry also FAILED.", trial, step.name)
         self.log(r_end, "candidate_skipped",
                  f"Trial {trial}: candidate SKIPPED - no tablets were made and no result exists.", trial, step.name)
@@ -201,16 +228,20 @@ class _Simulation:
         notes.append(f"{cause.capitalize()} at {step.label}: purged for {self.purge:g} min but the retry also failed. "
                      f"The candidate was skipped and has no result. Alert queued for {when}.")
         self.alerts.append(AlertRecord(r_end, self.clock.iso(r_end), self.clock.when(r_end), trial, "Needs attention",
-                                       f"{cause.capitalize()} (candidate skipped)", fault.alert, True, when))
+                                       f"{cause.capitalize()} (candidate skipped)", fault.alert, True, when, arrives))
         self.log(r_end, "alert_queued", f"Trial {trial}: ALERT queued for {when}: {fault.alert}.", trial, step.name)
         return False
 
-    def think_step(self, trial: int, step: Step, intervals: list[StepInterval]) -> tuple[tuple[float, float], tuple[float, float]]:
+    def think_step(self, trial: int, step: Step, intervals: list[StepInterval],
+                   after_skip: bool = False) -> tuple[tuple[float, float], tuple[float, float]]:
         """The final step (cleaning): the first part is Reason (choose the next recipe), the rest is Adapt."""
         s, e = self.minute, self.minute + step.duration_minutes
         reason_end = s + self.cfg.reason_minutes
-        self.log(s, "step_started", f"Trial {trial}: {step.label} started.", trial, step.name)
-        intervals.append(self.interval(step, step.label, "step", "completed", s, e))
+        self.log(s, "step_started", f"Trial {trial}: {step.label} started" + (" (after the skipped candidate)." if after_skip else "."),
+                 trial, step.name)
+        text = (f"{step.label}: cleaning after the skipped candidate (trial {trial})" if after_skip
+                else f"{step.label}: trial {trial}")
+        intervals.append(self.interval(step, step.label, "step", "completed", s, e, "working", text))
         if self.fits(e, trial + 1):
             self.decide(trial + 1, reason_end)
         self.minute = e
@@ -254,6 +285,7 @@ class _Simulation:
             self.phase("Reason", *reason_iv, "completed", reason_text),
             self.phase("Adapt", *adapt_iv, "completed", adapt_text),
         ]
+        self.classify(intervals, "Good" if good else "Not good")
         self.trials.append(TrialRecord(
             trial=trial, recipe=proposal.formulation.as_dict(), reason=proposal.reason, status="Completed",
             steps=intervals, phases=phases, start_minute=start, end_minute=self.minute,
@@ -262,11 +294,26 @@ class _Simulation:
             margin=mar, best_margin_so_far=best_so_far, good_so_far=good_so_far, notes=notes))
         self.log(self.minute, "trial_completed", f"Trial {trial} completed.", trial)
 
-    def finish_skipped(self, trial, proposal, start, intervals, notes) -> None:
+    def finish_skipped(self, trial, proposal, start, intervals, notes, reason_iv=None, adapt_iv=None) -> None:
         self.skipped.append(proposal.formulation)
         last = next((t for t in reversed(self.trials) if t.margin is not None), None)
-        act_text = "Tried to make the tablets. " + " ".join(notes)
-        phases = [self.phase("Act", start, self.minute, "failed", act_text)]
+        think = self.cfg.reason_adapt_step
+        act_end = max(i.end_minute for i in intervals if i.step != think)
+        phases = [self.phase("Act", start, act_end, "failed", "Tried to make the tablets. " + " ".join(notes))]
+        if reason_iv is not None:  # cleaning followed the skip, so Reason and Adapt happen as usual
+            nxt = self.pending
+            n_results = len(self.history)
+            if nxt is not None:
+                reason_text = (f"Trial {trial} gave no result to learn from. Reviewed {n_results} result(s) and chose the "
+                               f"recipe for trial {trial + 1}. {nxt.reason}.")
+                adapt_text = (f"Finished the {think} step and loaded the recipe for trial {trial + 1}: "
+                              f"{self.recipe_text(nxt.formulation)}.")
+            else:
+                reason_text = f"Reviewed {n_results} result(s). No further trial fits before the run ends."
+                adapt_text = f"Finished the {think} step. The run window is closing."
+            phases += [self.phase("Reason", *reason_iv, "completed", reason_text),
+                       self.phase("Adapt", *adapt_iv, "completed", adapt_text)]
+        self.classify(intervals, "No result")
         self.trials.append(TrialRecord(
             trial=trial, recipe=proposal.formulation.as_dict(), reason=proposal.reason, status="Skipped",
             steps=intervals, phases=phases, start_minute=start, end_minute=self.minute,
@@ -275,7 +322,7 @@ class _Simulation:
             best_margin_so_far=last.best_margin_so_far if last else None,
             good_so_far=self.trials[-1].good_so_far if self.trials else 0, notes=notes))
         self.log(self.minute, "trial_completed", f"Trial {trial} ended without a result (candidate skipped).", trial)
-        if self.fits(self.minute, trial + 1):
+        if reason_iv is None and self.fits(self.minute, trial + 1):  # no cleaning: decide straight away
             self.decide(trial + 1, self.minute,
                         f" (Decided straight away: trial {trial} produced no result to learn from.)")
 

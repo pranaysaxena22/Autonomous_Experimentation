@@ -60,8 +60,8 @@ def check_settings():
     record([e.trial for e in faults.events] == [8, 19]
            and [e.retry_succeeds for e in faults.events] == [True, False]
            and all(e.station == "dispense" for e in faults.events)
-           and faults.purge_minutes == 60,
-           "Scripted faults: both at the dispense step (binder clog); trial 8 recovers after a 1-hour purge, trial 19 fails its retry",
+           and faults.purge_minutes == 60 and faults.clean_after_skip,
+           "Scripted faults: both at the dispense step (binder clog); trial 8 recovers after a 1-hour purge, trial 19 fails its retry and a cleaning follows the skip",
            f"purge {faults.purge_minutes:g} min")
     record(s.comparison.manual_baseline_trials_per_week == 9, "The manual baseline is 9 trials per week",
            f"{s.comparison.manual_baseline_trials_per_week:g}")

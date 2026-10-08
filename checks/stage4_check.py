@@ -25,7 +25,6 @@ from cellpoc import run_store  # noqa: E402
 from cellpoc.contracts import Formulation  # noqa: E402
 from cellpoc.runner import run_closed_loop  # noqa: E402
 from cellpoc.settings import SettingsError, load_settings  # noqa: E402
-from cellpoc.settings.models import ScriptedFaults  # noqa: E402
 from cellpoc.virtual_lab import VirtualLab  # noqa: E402
 from checks import architecture  # noqa: E402
 from checks.common import Checklist, external_references, write_chart_page  # noqa: E402
@@ -59,6 +58,8 @@ def expected_schedule(settings):
             length, skipped = nominal + purge + dur[f.station], False
         else:
             length = sum(dur[x] for x in order[:order.index(f.station)]) + 2 * dur[f.station] + purge
+            if settings.scripted_faults.clean_after_skip:
+                length += dur[settings.cell.phases.reason_adapt_step]   # the cleaning step still follows a skipped candidate
             skipped = True
         if t + length > end_of_run:
             return schedule
@@ -160,8 +161,19 @@ def check_phases(settings, run):
            "Act is dispense + blend + press; on trial 8 it is longer by the purge and the retry",
            f"normal {expected_act:g} min; trial 8 {act_8.end_minute - act_8.start_minute:g} min")
     skipped = run.trials[18]
-    record([p.phase for p in skipped.phases] == ["Act"] and skipped.phases[0].status == "failed",
-           "The skipped trial shows only an Act phase, marked failed")
+    expected_phases = ["Act", "Reason", "Adapt"] if settings.scripted_faults.clean_after_skip else ["Act"]
+    record([p.phase for p in skipped.phases] == expected_phases and skipped.phases[0].status == "failed",
+           "The skipped trial shows an Act phase marked failed, then Reason and Adapt during the cleaning that follows"
+           if settings.scripted_faults.clean_after_skip else "The skipped trial shows only an Act phase, marked failed",
+           " > ".join(p.phase for p in skipped.phases))
+    if settings.scripted_faults.clean_after_skip:
+        by = {p.phase: p for p in skipped.phases}
+        record(by["Reason"].end_minute - by["Reason"].start_minute == cfg.reason_minutes
+               and by["Reason"].start_minute == by["Act"].end_minute and by["Adapt"].end_minute == skipped.end_minute,
+               "After the skip, cleaning follows at once: Reason is its first 30 minutes and Adapt the rest")
+        record([i.step for i in skipped.steps] == ["dispense", "dispense", "dispense", "clean"],
+               "The skipped trial's work is: failed attempt, purge, failed retry, then a full cleaning step",
+               " > ".join(i.label for i in skipped.steps))
     record(all(p.description and len(p.description) > 20 for x in run.trials for p in x.phases),
            "Every phase carries a plain-language description the dashboard can show as it is")
 
@@ -180,7 +192,13 @@ def check_alerts(settings, run):
     a8, a19 = [a for a in run.alerts if a.trial == 8], [a for a in run.alerts if a.trial == 19]
     record(len(a8) == 1 and not a8[0].needs_human and a8[0].queued_for is None and a8[0].severity == "Recovered",
            "Trial 8's alert says it recovered and needs nobody")
-    skip_minute = run.trials[18].end_minute
+    # the moment the retry fails = start of trial 19 + the steps before the faulty one + attempt + purge + retry
+    dur = {s.name: s.duration_minutes for s in settings.cell.steps}
+    order = [s.name for s in settings.cell.steps]
+    fault19 = settings.scripted_faults.events[1]
+    start19 = [a for n, a, _, _ in expected_schedule(settings) if n == 19][0]
+    skip_minute = (start19 + sum(dur[x] for x in order[:order.index(fault19.station)]) + 2 * dur[fault19.station]
+                   + settings.scripted_faults.purge_minutes)
     arrives = independent_arrival_after(settings, skip_minute)
     expected_when = (settings.run.start + timedelta(minutes=arrives)).strftime("%a %d %b %H:%M") if arrives else None
     record(len(a19) == 1 and a19[0].needs_human and a19[0].queued_for == expected_when,
@@ -248,15 +266,22 @@ def check_reproducible(settings, run):
 
 def check_what_ifs(settings, run):
     base = settings.scripted_faults
-    slower = dataclasses.replace(settings, scripted_faults=ScriptedFaults(90, base.events))
+    slower = dataclasses.replace(settings, scripted_faults=dataclasses.replace(base, purge_minutes=90))
     r = run_closed_loop(slower)
-    record(r.summary.trials_attempted == 29 and "not started" in r.events[-1].message,
-           "What-if: with a 90-minute purge the cell attempts only 29 trials, and the log says why. Nothing forces the count to 30",
-           r.summary.attempts_text)
-    clean = dataclasses.replace(settings, scripted_faults=ScriptedFaults(base.purge_minutes, ()))
-    r2 = run_closed_loop(clean)
-    record(r2.summary.trials_attempted == 30 and r2.summary.trials_skipped == 0 and not r2.alerts,
-           "What-if: with no faults at all the same engine completes 30 trials, with no alerts", r2.summary.attempts_text)
+    expected = len(expected_schedule(slower))
+    record(r.summary.trials_attempted == expected and "not started" in r.events[-1].message,
+           "What-if: with a 90-minute purge the count changes to what fits, and the log says why. Nothing forces a particular number",
+           f"{r.summary.attempts_text} (separately worked out: {expected} fit)")
+    flipped = dataclasses.replace(settings, scripted_faults=dataclasses.replace(base, clean_after_skip=not base.clean_after_skip))
+    r_flip = run_closed_loop(flipped)
+    record(r_flip.summary.trials_attempted == len(expected_schedule(flipped))
+           and r_flip.summary.trials_attempted != run.summary.trials_attempted,
+           f"What-if: with cleaning after the skip switched {'off' if base.clean_after_skip else 'on'}, the trial count changes",
+           f"{run.summary.attempts_text} -> {r_flip.summary.attempts_text}")
+    nofaults = dataclasses.replace(settings, scripted_faults=dataclasses.replace(base, events=()))
+    r2 = run_closed_loop(nofaults)
+    record(r2.summary.trials_attempted == len(expected_schedule(nofaults)) and r2.summary.trials_skipped == 0 and not r2.alerts,
+           "What-if: with no faults at all the same engine fits the full 120 hours with no skips and no alerts", r2.summary.attempts_text)
     record(run.comparison is None, "The closed-loop run is separate from the 40-campaign comparison (it carries no comparison)")
 
 

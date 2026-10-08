@@ -49,6 +49,18 @@ class RunClock:
                 block_start, state = minute, now
         return blocks
 
+    def _kind(self, start: int, end: int, staffed: bool) -> str:
+        """Staffed, or for an empty lab: a Weekend if it touches Saturday or Sunday, a Night if it sits wholly between
+        closing and opening time, otherwise plain Unattended."""
+        if staffed:
+            return "Staffed"
+        if any(self.moment(m).weekday() >= 5 for m in range(start, end, 60)):
+            return "Weekend"
+        first, last = self.moment(start), self.moment(end)
+        if first.time() >= self._people.staffed_until and last.date() > first.date() and last.time() <= self._people.staffed_from:
+            return "Night"
+        return "Unattended"
+
     def _block(self, start: int, end: int, staffed: bool) -> CalendarBlock:
         return CalendarBlock(start, end, self.iso(start), self.iso(end), staffed,
-                             "Staffed" if staffed else "Unattended")
+                             "Staffed" if staffed else "Unattended", self._kind(start, end, staffed))

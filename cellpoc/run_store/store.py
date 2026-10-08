@@ -17,7 +17,7 @@ def save(record: RunRecord, folder: Path | str) -> Path:
     folder = Path(folder)
     folder.mkdir(parents=True, exist_ok=True)
     path = folder / RECORD_NAME
-    path.write_text(json.dumps(asdict(record), indent=1), encoding="utf-8")
+    path.write_text(json.dumps(asdict(record), separators=(",", ":")), encoding="utf-8")
     return path
 
 

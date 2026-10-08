@@ -40,6 +40,7 @@ class CalendarBlock:
     end: str
     staffed: bool
     label: str                    # "Staffed" or "Unattended"
+    kind: str                     # "Staffed", "Night", "Weekend" or "Unattended" (for shading)
 
 
 @dataclass
@@ -54,6 +55,9 @@ class StepInterval:
     start: str
     end: str
     attended: bool                # was someone in the lab when it began
+    state: str                    # working, purge or retry: what the station is doing during this stretch
+    status_text: str              # the station's status in words, e.g. "Purging after binder dispenser clog (trial 8)"
+    look: str                     # how a chart should classify it, e.g. "Trial measured good", "Fault: purge"
 
 
 @dataclass
@@ -114,6 +118,7 @@ class AlertRecord:
     message: str
     needs_human: bool
     queued_for: str | None        # when staff will next be in, e.g. "Tue 13 Oct 08:00" (None = nobody is needed)
+    queued_for_minute: int | None
 
 
 @dataclass
@@ -155,6 +160,59 @@ class Summary:
 
 
 @dataclass
+class StationStatus:
+    station: str                  # the station's label, e.g. "Dispense"
+    state: str                    # idle, working, purge or retry
+    text: str                     # e.g. "Idle", "Blend: trial 8", "Purging after binder dispenser clog (trial 8)"
+
+
+@dataclass
+class PhaseState:
+    phase: str                    # Act, Sense, Reason, Adapt
+    state: str                    # waiting, active, done or failed
+    description: str              # what the phase did / is doing, in words
+
+
+@dataclass
+class Snapshot:
+    """Everything to show at one moment of the run, worked out in advance so the dashboard only displays it."""
+    index: int
+    minute: float
+    time: str
+    when: str
+    staff_present: bool
+    staff_text: str
+    stations: list[StationStatus]
+    trial: int | None             # the trial in progress (None if no trial is running)
+    trial_headline: str
+    recipe_lines: list[str]       # e.g. "Drug: 17.2%"
+    why: str                      # why the decision engine chose this recipe
+    active_phase: str | None
+    phases: list[PhaseState]
+    result_kind: str              # good, not_good, no_result, pending or none
+    result_text: str              # empty of numbers until the result is actually known
+    trials_finished: int
+    results_so_far: int
+    good_so_far: int
+    best_text: str
+    alerts_so_far: list[str]
+    just_happened: list[str]      # events at exactly this moment
+    recent_events: list[str]      # the last few events, newest first
+    is_event: bool                # an event happens at this moment
+    previous_event_index: int | None
+    next_event_index: int | None
+
+
+@dataclass
+class AboutRecord:
+    """Plain-language statements for the 'what this shows and does not show' page."""
+    shows: list[str]
+    does_not_show: list[str]
+    comparison_note: str          # how the advantage of learning changes with difficulty
+    throughput_note: str
+
+
+@dataclass
 class RunRecord:
     meta: RunMeta
     ingredient_labels: dict[str, str]
@@ -165,5 +223,7 @@ class RunRecord:
     alerts: list[AlertRecord]
     handovers: list[HandoverSummary]
     summary: Summary
+    snapshots: list[Snapshot]
     comparison: ComparisonResult | None = None               # the headline strategy comparison (no faults)
     comparison_with_faults: ComparisonResult | None = None   # the same with the scripted faults applied
+    about: AboutRecord | None = None

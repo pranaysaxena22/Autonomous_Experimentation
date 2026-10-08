@@ -230,6 +230,9 @@ def settings_from_dict(raw: Any) -> Settings:
     # scripted faults (checked against the steps and campaign length above)
     f = r.section(raw, "scripted_faults", "")
     purge = r.number(f, "purge_minutes", "scripted_faults", positive=True)
+    clean_after_skip = f.get("clean_after_skip")
+    if not isinstance(clean_after_skip, bool):
+        r.problem("scripted_faults > clean_after_skip", f"expected true or false but found {clean_after_skip!r}.")
     events = []
     events_raw = f.get("events")
     if not isinstance(events_raw, list):
@@ -260,4 +263,4 @@ def settings_from_dict(raw: Any) -> Settings:
     if r.problems:
         raise SettingsError(r.problems)
     return Settings(display, DesignSpace(tuple(ingredients)), Specifications(dissolution, hardness),
-                    Cell(tuple(steps), measurement_step, phases), run, people, noise, ScriptedFaults(purge, tuple(events)), comparison, engine)
+                    Cell(tuple(steps), measurement_step, phases), run, people, noise, ScriptedFaults(purge, tuple(events), bool(clean_after_skip)), comparison, engine)

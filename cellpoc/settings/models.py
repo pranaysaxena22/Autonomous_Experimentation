@@ -113,6 +113,7 @@ class ScriptedFault:
 class ScriptedFaults:
     purge_minutes: float
     events: tuple[ScriptedFault, ...]
+    clean_after_skip: bool = True
 
     @property
     def skipped_trials(self) -> frozenset[int]:
