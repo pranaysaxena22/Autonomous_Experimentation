@@ -104,6 +104,17 @@ class ScriptedFaults:
     purge_minutes: float
     events: tuple[ScriptedFault, ...]
 
+    @property
+    def skipped_trials(self) -> frozenset[int]:
+        """Trials whose retry also fails: no recipe is made and no result exists."""
+        return frozenset(e.trial for e in self.events if not e.retry_succeeds)
+
+
+@dataclass(frozen=True)
+class EngineSettings:
+    initial_recipes: int
+    candidates_per_decision: int
+
 
 @dataclass(frozen=True)
 class Comparison:
@@ -123,3 +134,4 @@ class Settings:
     noise: Noise
     scripted_faults: ScriptedFaults
     comparison: Comparison
+    engine: EngineSettings

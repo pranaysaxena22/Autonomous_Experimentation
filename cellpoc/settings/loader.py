@@ -8,7 +8,7 @@ from typing import Any
 import yaml
 
 from .models import (
-    Cell, Comparison, DesignSpace, Display, DissolutionSpec, HardnessSpec,
+    Cell, Comparison, DesignSpace, Display, DissolutionSpec, EngineSettings, HardnessSpec,
     Ingredient, Noise, People, Run, ScriptedFault, ScriptedFaults, Settings,
     Specifications, Step,
 )
@@ -195,6 +195,14 @@ def settings_from_dict(raw: Any) -> Settings:
         r.number(c, "trials_per_campaign", "comparison", positive=True, integer=True),
         r.number(c, "manual_baseline_trials_per_week", "comparison", positive=True))
 
+    # decision engine
+    e = r.section(raw, "decision_engine", "")
+    engine = EngineSettings(r.number(e, "initial_recipes", "decision_engine", positive=True, integer=True),
+                            r.number(e, "candidates_per_decision", "decision_engine", positive=True, integer=True))
+    if engine.initial_recipes > comparison.trials_per_campaign:
+        r.problem("decision_engine > initial_recipes",
+                  f"{engine.initial_recipes} spread-out recipes is more than the {comparison.trials_per_campaign} trials in a campaign.")
+
     # scripted faults (checked against the steps and campaign length above)
     f = r.section(raw, "scripted_faults", "")
     purge = r.number(f, "purge_minutes", "scripted_faults", positive=True)
@@ -225,4 +233,4 @@ def settings_from_dict(raw: Any) -> Settings:
     if r.problems:
         raise SettingsError(r.problems)
     return Settings(display, DesignSpace(tuple(ingredients)), Specifications(dissolution, hardness),
-                    Cell(tuple(steps), measurement_step), run, people, noise, ScriptedFaults(purge, tuple(events)), comparison)
+                    Cell(tuple(steps), measurement_step), run, people, noise, ScriptedFaults(purge, tuple(events)), comparison, engine)

@@ -6,7 +6,9 @@ nothing downstream has to calculate: `minute` (minutes since the run began), `ti
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+
+from .comparison_record import ComparisonResult
 
 
 @dataclass
@@ -105,3 +107,4 @@ class RunRecord:
     trials: list[TrialRecord]
     events: list[EventRecord]
     summary: Summary
+    comparison: ComparisonResult | None = None   # the multi-campaign strategy comparison, when one was run

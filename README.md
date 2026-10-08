@@ -19,6 +19,10 @@ All tunable numbers are in `config\settings.yaml`.
 Stage 2: double-click `check_stage2.bat`. It runs the simulated cell for the full 120 hours on a fixed
 list of recipes and writes `runs\stage2\timeline.html`, `event_log.csv`, `trials.csv` and `record.json`.
 
+Stage 3: double-click `check_stage3.bat` (takes about a minute). It runs the adaptive engine and the
+40-campaign comparison (fixed list vs adaptive vs random, with and without faults) and writes
+`runs\stage3\comparison_summary.txt`, `comparison.html`, `campaigns.csv` and `demo_event_log.csv`.
+
 ## Add a library
 
     .venv\Scripts\python.exe -m pip install <package>

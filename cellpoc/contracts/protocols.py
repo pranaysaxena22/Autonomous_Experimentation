@@ -21,9 +21,15 @@ class Lab(Protocol):
 
 
 class Strategy(Protocol):
-    """A decision engine. It sees only past measurements - never the lab's hidden truth."""
+    """A decision engine. It sees only past measurements - never the lab's hidden truth.
+
+    `history` holds the measurements so far. A trial that produced no result (a skipped
+    candidate) is absent from it, so history can be shorter than trial_number - 1; the
+    recipes of such trials are passed in `skipped` so they are not simply proposed again.
+    """
 
     name: str
     description: str
 
-    def propose(self, trial_number: int, history: Sequence[Measurement]) -> Proposal: ...
+    def propose(self, trial_number: int, history: Sequence[Measurement],
+                skipped: Sequence[Formulation] = ()) -> Proposal: ...

@@ -102,6 +102,7 @@ One trial therefore takes **{trial_hours:g} hours** from start to finish.
 ## Limitations
 - **Ingredients are not forced to sum to 100%.** Each of the five percentages is varied independently within its own range, so a recipe's ingredients can add up to more or less than 100%. A real design space would normally fix one ingredient (often the filler) as the remainder.
 - **The tablet behaviour is a made-up placeholder.** The virtual lab's hidden truth is a smooth illustrative model, not real pharmaceutical data.
+- **The hidden truth is smooth,** which favours a strategy that learns a model of it. Real formulation data would be rougher, so the size of the adaptive strategy's lead here is illustrative, not a prediction.
 - **One trial at a time.** The cell never works on two trials at once.
 - **Measurement noise is the only random effect** in the lab. There is no instrument drift, no reagent run-out and no recalibration.
 

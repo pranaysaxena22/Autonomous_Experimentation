@@ -7,7 +7,7 @@ for the measurement when the measuring step finishes, and logs everything.
 from __future__ import annotations
 
 from ..contracts import (
-    EventRecord, Lab, Measurement, RunMeta, RunRecord, StepInfo, StepInterval, Strategy,
+    EventRecord, Formulation, Lab, Measurement, RunMeta, RunRecord, StepInfo, StepInterval, Strategy,
     Summary, TrialRecord, margin, meets_spec,
 )
 from ..settings import Settings
@@ -24,6 +24,7 @@ def simulate(settings: Settings, lab: Lab, strategy: Strategy, run_id: str) -> R
     events: list[EventRecord] = []
     trials: list[TrialRecord] = []
     history: list[Measurement] = []
+    skipped: list[Formulation] = []  # recipes of trials that produced no result (filled in Stage 4)
 
     def log(minute: float, kind: str, message: str, trial: int | None = None, station: str | None = None) -> None:
         events.append(EventRecord(minute, clock.iso(minute), clock.when(minute), kind, trial, station,
@@ -34,7 +35,7 @@ def simulate(settings: Settings, lab: Lab, strategy: Strategy, run_id: str) -> R
 
     trial = 1
     while minute + trial_minutes <= clock.duration_minutes:
-        proposal = strategy.propose(trial, tuple(history))
+        proposal = strategy.propose(trial, tuple(history), tuple(skipped))
         recipe = proposal.formulation.as_dict()
         recipe_text = ", ".join(f"{labels[k]} {v:.1f}%" for k, v in recipe.items())
         log(minute, "decision", f"Trial {trial}: {proposal.reason}. Recipe: {recipe_text}.", trial)

@@ -20,11 +20,15 @@ ALLOWED = {
     "decision_engine": {"contracts", "settings"},
     "cell_simulator": {"contracts", "settings"},
     "run_store": {"contracts"},
+    "scoring": {"contracts", "settings", "virtual_lab"},       # judges results against the truth, after the fact
+    "comparison": {"contracts", "settings", "virtual_lab", "decision_engine", "scoring"},
     "dashboard": {"run_store", "contracts", "settings"},
-    "runner": {"settings", "contracts", "virtual_lab", "decision_engine", "cell_simulator", "run_store"},
+    "runner": {"settings", "contracts", "virtual_lab", "decision_engine", "cell_simulator", "run_store",
+               "comparison"},
 }
 PARTS = set(ALLOWED)
-HIDDEN = ("_truth", "oracle")  # modules only the virtual lab itself (and the scoring checks) may touch
+HIDDEN = ("_truth", "oracle")  # modules only the virtual lab itself and the after-the-fact scoring may touch
+MAY_SEE_TRUTH = {"virtual_lab", "scoring"}
 
 
 def _imported_parts(path: Path) -> set[str]:
@@ -61,7 +65,7 @@ def check(checklist: Checklist) -> None:
         for other in _imported_parts(path) - {part}:
             if other not in ALLOWED[part]:
                 breaches.append(f"{relative} (part '{part}') imports '{other}'")
-        if part != "virtual_lab":
+        if part not in MAY_SEE_TRUTH:
             text = path.read_text(encoding="utf-8")
             if any(f"virtual_lab.{h}" in text or f"import {h}" in text or f"from .{h}" in text for h in HIDDEN):
                 breaches.append(f"{relative} reaches into the virtual lab's hidden truth")

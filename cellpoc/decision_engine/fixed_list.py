@@ -28,7 +28,8 @@ class FixedListStrategy:
             columns.append([ingredient.min + (s + rng.random()) * width for s in slices])
         self._list = [Formulation(*row) for row in zip(*columns)]
 
-    def propose(self, trial_number: int, history: Sequence[Measurement]) -> Proposal:
+    def propose(self, trial_number: int, history: Sequence[Measurement],
+                skipped: Sequence[Formulation] = ()) -> Proposal:
         if not 1 <= trial_number <= len(self._list):
             raise IndexError(f"The fixed list has {len(self._list)} recipes, but trial {trial_number} was requested.")
         return Proposal(self._list[trial_number - 1],

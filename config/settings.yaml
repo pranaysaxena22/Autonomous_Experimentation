@@ -63,6 +63,11 @@ virtual_lab:
     dissolution_sd: 2.0          # typical scatter, in % points
     hardness_sd: 0.35            # typical scatter, in kP
 
+# ---- Decision engine (the adaptive strategy)
+decision_engine:
+  initial_recipes: 6             # first recipes are spread evenly across the space
+  candidates_per_decision: 3000  # how many possible recipes it weighs before each choice
+
 # ---- Faults that happen on purpose (used when the simulator is built)
 scripted_faults:
   purge_minutes: 60              # time to purge and reset after a failure
