@@ -36,5 +36,13 @@ performs, and the check allows exactly one division in exactly that file.
 6. **What this shows** - what the simulation shows and does not show (the same text as the scenario page's Limitations).
 
 ## Look and fonts
-Deloitte green (#86BC25) and Open Sans with an Arial fallback. The Open Sans font file is bundled in `static\`
-(SIL Open Font License, licence text alongside), so it appears even with no internet.
+Follows the Deloitte brand guidance (digital applications, June 2025):
+- **Colours:** Deloitte Green #86BC25 first (borders, fills, the active phase, the first chart series), Dark Gray #282728
+  for text and dark surfaces, Blue #00A3E0 and the rest of the palette for further series. Amber and red are used only for
+  fault and status indicators, as the brand allows. Green is not used for small text on white (too little contrast).
+- **Header:** a dark band with the 4px green top rule, concentric-ring decoration at low opacity, and one italic accent
+  word in neon green (#86EB22, the brand colour for accents on dark surfaces).
+- **Cards and tables:** white cards with a green accent edge; table headers dark gray with white text.
+- **Type:** Open Sans with an Arial fallback. The font file is bundled in `static\` (SIL Open Font License, licence text
+  alongside), so it appears even with no internet.
+- A health check fails if any colour in the dashboard is outside the palette.

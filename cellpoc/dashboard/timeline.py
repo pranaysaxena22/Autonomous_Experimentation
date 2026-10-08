@@ -36,7 +36,7 @@ def render(record) -> None:
                            for a in record.alerts])
     markers = alt.Chart(alerts).mark_point(shape="triangle-up", size=260, filled=True, opacity=1).encode(
         x="Time:T", y=alt.Y("Trial:O"),
-        color=alt.Color("Severity:N", scale=alt.Scale(domain=["Recovered", "Needs attention"], range=["#F5A623", "#D0021B"]),
+        color=alt.Color("Severity:N", scale=alt.Scale(domain=["Recovered", "Needs attention"], range=[style.AMBER, style.RED]),
                         legend=alt.Legend(title="Alert")),
         tooltip=["When", "Alert", "Severity"])
     by_trial = (_shading(record) + _bars(record, alt.Y("Trial:O", sort="ascending", title="Trial")) + markers).properties(

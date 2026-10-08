@@ -35,7 +35,7 @@ def render(record) -> None:
     style.chart(alt.Chart(bars).mark_bar(size=70).encode(
         x=alt.X("Who:N", title=None, sort=["Autonomous cell", "Manual baseline"]), y=alt.Y("Trials per week:Q"),
         color=alt.Color("Who:N", legend=None, scale=alt.Scale(domain=["Autonomous cell", "Manual baseline"],
-                                                              range=[style.GREEN, "#A0A0A0"])),
+                                                              range=[style.GREEN, style.DARK])),
         tooltip=["Who", "Trials per week"]).properties(height=320))
 
     st.markdown(f"**This run:** {summary.attempts_text}. The lab was empty for {summary.unattended_hours:g} of "

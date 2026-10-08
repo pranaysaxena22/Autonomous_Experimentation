@@ -2,9 +2,22 @@
 base = "light"
 primaryColor = "#86BC25"
 backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#F3F6EA"
-textColor = "#1A1A1A"
+secondaryBackgroundColor = "#F5F5F5"
+textColor = "#282728"
+linkColor = "#005587"
+borderColor = "#E6E6E6"
+dataframeBorderColor = "#E6E6E6"
+dataframeHeaderBackgroundColor = "#282728"
+dataframeHeaderTextColor = "#FFFFFF"
+greenColor = "#86BC25"
+blueColor = "#00A3E0"
+redColor = "#DA291C"
+orangeColor = "#E8A317"
+chartCategoricalColors = ["#86BC25", "#00A3E0", "#282728", "#86EB22", "#A0DCFF", "#005587", "#B7E320", "#63C631"]
 font = "sans-serif"
+
+[client]
+toolbarMode = "minimal"
 
 [browser]
 gatherUsageStats = false

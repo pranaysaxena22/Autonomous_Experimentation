@@ -384,6 +384,21 @@ def check_sources():
     config = (ROOT / ".streamlit" / "config.toml").read_text(encoding="utf-8")
     record("#86BC25" in style and "#86BC25" in config and "'Open Sans', Arial" in style and "gatherUsageStats = false" in config,
            "Deloitte green (#86BC25) and the Open Sans-then-Arial font stack are set; usage reporting to the internet is off")
+    # every colour used must come from the Deloitte brand palette (digital-brand guidance, June 2025)
+    brand = {"#86BC25", "#000000", "#86EB22", "#00A3E0", "#282728", "#FFFFFF", "#A0DCFF", "#005587", "#E6E6E6", "#E2E2E2",
+             "#F5F5F5", "#555555", "#B7E320", "#63C631", "#3FC3EC", "#E8A317", "#DA291C"}
+    used = {}
+    for path in [*(ROOT / "cellpoc" / "dashboard").glob("*.py"), ROOT / ".streamlit" / "config.toml"]:
+        for code in re.findall(r"#[0-9A-Fa-f]{6}\b", path.read_text(encoding="utf-8")):
+            used.setdefault(code.upper(), path.name)
+    off_palette = {c: f for c, f in used.items() if c not in brand}
+    record(not off_palette and {"#86BC25", "#282728", "#00A3E0", "#86EB22"} <= set(used),
+           "Every colour in the dashboard is from the Deloitte palette (green first; dark gray, blue and neon green all in use)",
+           f"{len(used)} colours checked" if not off_palette else f"not in the palette: {off_palette}")
+    css = (ROOT / "cellpoc" / "dashboard" / "style.py").read_text(encoding="utf-8")
+    record("border-top: 4px solid {GREEN}" in css and "background: {DARK}" in css and "dl-accent-word" in css
+           and "color: {NEON}" in css,
+           "The header follows the brand: dark gray band, 4px Deloitte-green top rule, one italic accent word in neon green (as required on dark surfaces)")
     record((ROOT / "static" / "OpenSans.ttf").exists() and (ROOT / "static" / "OpenSans-OFL.txt").exists(),
            "The Open Sans font file and its licence are bundled in the project")
 
