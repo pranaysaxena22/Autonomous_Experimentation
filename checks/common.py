@@ -43,6 +43,10 @@ class Checklist:
     def skip(self, what: str, detail: str) -> None:
         self.rows.append(("SKIP", what, detail))
 
+    def warn(self, what: str, detail: str = "") -> None:
+        """Something to look at that does not make the check fail."""
+        self.rows.append(("WARN", what, detail))
+
     def headline(self, text: str) -> None:
         self.headlines.append(text)
 
@@ -61,5 +65,8 @@ class Checklist:
             print("-" * 60)
         failed = sum(1 for status, _, _ in self.rows if status == "FAIL")
         passed = sum(1 for status, _, _ in self.rows if status == "PASS")
-        print(f"{passed} passed, {failed} failed." + ("  ALL GOOD." if not failed else "  SOMETHING NEEDS ATTENTION."))
+        warned = sum(1 for status, _, _ in self.rows if status == "WARN")
+        warning_text = f", {warned} warning{'s' if warned != 1 else ''}" if warned else ""
+        verdict = "  SOMETHING NEEDS ATTENTION." if failed else ("  ALL GOOD (warnings are for you to look at; they are not failures)." if warned else "  ALL GOOD.")
+        print(f"{passed} passed, {failed} failed{warning_text}." + verdict)
         return 1 if failed else 0

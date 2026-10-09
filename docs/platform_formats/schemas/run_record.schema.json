@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Run record (format version 2)",
+  "description": "What the dashboard and reports read. Every section of today's record is either present here or marked with an 'unchanged_from_poc' marker.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format_version", "label", "data_status", "meta", "ingredient_labels", "steps", "calendar", "data", "model", "trials", "events", "alerts", "handovers", "summary", "snapshots", "comparison", "comparison_with_faults", "about"],
+  "properties": {
+    "format_version": {"const": 2},
+    "label": {"type": "string", "minLength": 1},
+    "data_status": {"$ref": "#/$defs/data_status"},
+    "meta": {
+      "type": "object", "additionalProperties": false,
+      "required": ["run_id", "banner", "start", "end", "seed", "executor", "setup_file", "layout_file", "inputs", "data_status_rule"],
+      "properties": {
+        "run_id": {"type": "string", "minLength": 1}, "banner": {"type": "string", "minLength": 1},
+        "start": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}$"}, "end": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}$"},
+        "seed": {"type": "integer"}, "executor": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+        "setup_file": {"$ref": "#/$defs/relative_path"}, "layout_file": {"$ref": "#/$defs/relative_path"},
+        "inputs": {"type": "array", "minItems": 1, "items": {"type": "object", "additionalProperties": false, "required": ["file", "data_status"], "properties": {"file": {"$ref": "#/$defs/relative_path"}, "data_status": {"$ref": "#/$defs/data_status"}}}},
+        "data_status_rule": {"type": "string"}
+      }
+    },
+    "ingredient_labels": {"type": "object", "minProperties": 1, "propertyNames": {"pattern": "^[a-z][a-z0-9_]*_pct$"}, "additionalProperties": {"type": "string"}},
+    "steps": {"type": "array", "minItems": 1, "items": {"type": "object", "additionalProperties": false, "required": ["name", "label", "time_min"],
+                                                         "properties": {"name": {"enum": ["dispense", "mix", "press", "test", "clean"]}, "label": {"type": "string"}, "time_min": {"type": "number", "exclusiveMinimum": 0}}}},
+    "calendar": {"$ref": "#/$defs/unchanged"},
+    "data": {
+      "type": "object", "additionalProperties": false, "required": ["experiments_file", "meta_file", "rows_read", "rows_used", "quality_report"],
+      "properties": {
+        "experiments_file": {"$ref": "#/$defs/relative_path"}, "meta_file": {"$ref": "#/$defs/relative_path"}, "rows_read": {"type": "integer", "minimum": 0}, "rows_used": {"type": "integer", "minimum": 0},
+        "quality_report": {"type": "object", "additionalProperties": false, "required": ["rows_failed_runs", "rows_missing_values", "rows_converted_units", "rows_below_detection", "plain_summary"],
+                           "properties": {"rows_failed_runs": {"type": "integer", "minimum": 0}, "rows_missing_values": {"type": "integer", "minimum": 0}, "rows_converted_units": {"type": "integer", "minimum": 0},
+                                          "rows_below_detection": {"type": "integer", "minimum": 0}, "plain_summary": {"type": "string", "minLength": 1}}}
+      }
+    },
+    "model": {
+      "type": "object", "additionalProperties": false, "required": ["selected", "how_chosen", "candidates", "note"],
+      "properties": {
+        "selected": {"type": ["string", "null"]}, "how_chosen": {"type": ["string", "null"]},
+        "candidates": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["name"],
+                                                  "properties": {"name": {"type": "string"}, "error_dissolution_30min_pct": {"type": ["number", "null"]}, "error_hardness_kp": {"type": ["number", "null"]}}}},
+        "note": {"type": "string", "minLength": 1}
+      },
+      "if": {"properties": {"selected": {"type": "null"}}, "required": ["selected"]},
+      "then": {"properties": {"how_chosen": {"type": "null"}, "candidates": {"items": {"properties": {"error_dissolution_30min_pct": {"type": "null"}, "error_hardness_kp": {"type": "null"}}}}}}
+    },
+    "trials": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["trial", "status", "recipe", "why", "plan_id", "plan_file", "executed_file", "result", "notes"],
+        "properties": {
+          "trial": {"type": "integer", "minimum": 1}, "status": {"enum": ["Completed", "Skipped"]},
+          "recipe": {"type": "object", "minProperties": 2, "propertyNames": {"pattern": "^[a-z][a-z0-9_]*$"}, "additionalProperties": {"type": "number"}},
+          "why": {"type": "string"}, "plan_id": {"type": "string", "pattern": "^T[0-9]{3,}$"}, "plan_file": {"$ref": "#/$defs/relative_path"}, "executed_file": {"$ref": "#/$defs/relative_path"},
+          "result": {"type": "object", "additionalProperties": false, "required": ["dissolution_30min_pct", "hardness_kp", "friability_pct", "verdict"],
+                     "properties": {"dissolution_30min_pct": {"type": ["number", "null"]}, "hardness_kp": {"type": ["number", "null"]}, "friability_pct": {"type": ["number", "null"]}, "verdict": {"enum": ["Good", "Not good", "No result"]}}},
+          "notes": {"type": "array", "items": {"type": "string"}}, "other_fields": {"type": "string"}
+        }
+      }
+    },
+    "events": {"$ref": "#/$defs/unchanged"}, "alerts": {"$ref": "#/$defs/unchanged"}, "handovers": {"$ref": "#/$defs/unchanged"}, "summary": {"$ref": "#/$defs/unchanged"},
+    "snapshots": {"$ref": "#/$defs/unchanged"}, "comparison": {"$ref": "#/$defs/unchanged"}, "comparison_with_faults": {"$ref": "#/$defs/unchanged"}, "about": {"$ref": "#/$defs/unchanged"}
+  },
+  "$defs": {
+    "data_status": {"enum": ["synthetic", "illustrative", "real", "validated"]},
+    "relative_path": {"type": "string", "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?!.*(^|[/\\\\])\\.\\.([/\\\\]|$))[^:*?\"<>|]+$"},
+    "unchanged": {"type": "object", "additionalProperties": false, "required": ["unchanged_from_poc", "note"], "properties": {"unchanged_from_poc": {"const": true}, "note": {"type": "string", "minLength": 1}}}
+  }
+}

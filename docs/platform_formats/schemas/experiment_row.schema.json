@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Experiment table: one row, after reading (format version 1)",
+  "description": "Describes ONE ROW of the raw client table once it has been read: empty cells become null and numbers become numbers. All 21 columns must be present; a blank cell is allowed only where the schema says null is allowed. Column names are the raw names used by data/mock/.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["experiment_id", "replicate_no", "date", "batch_id", "drug_pct", "filler_pct", "binder_pct", "disintegrant_pct", "lubricant_pct", "binder_supplier", "filler_grade", "compression_force_kN", "blend_time_min", "dissolution_instrument", "dissolution_30min_pct", "hardness", "hardness_unit", "friability_pct", "friability_note", "status", "failure_reason"],
+  "properties": {
+    "experiment_id": {"type": "string", "pattern": "^E[0-9]{5}$"},
+    "replicate_no": {"type": "integer", "minimum": 1},
+    "date": {"type": "string", "format": "date"},
+    "batch_id": {"type": "string", "pattern": "^B[0-9]{3}$"},
+    "drug_pct": {"type": "number", "minimum": 0, "maximum": 100},
+    "filler_pct": {"type": "number", "minimum": 0, "maximum": 100},
+    "binder_pct": {"type": "number", "minimum": 0, "maximum": 100},
+    "disintegrant_pct": {"type": "number", "minimum": 0, "maximum": 100},
+    "lubricant_pct": {"type": "number", "minimum": 0, "maximum": 100},
+    "binder_supplier": {"type": "string", "minLength": 1},
+    "filler_grade": {"type": "string", "minLength": 1},
+    "compression_force_kN": {"type": "number", "exclusiveMinimum": 0},
+    "blend_time_min": {"type": "number", "exclusiveMinimum": 0},
+    "dissolution_instrument": {"type": "string", "minLength": 1},
+    "dissolution_30min_pct": {"type": ["number", "null"], "minimum": 0, "maximum": 100},
+    "hardness": {"type": ["number", "null"], "minimum": 0},
+    "hardness_unit": {"enum": ["kP", "N"]},
+    "friability_pct": {"type": ["number", "null"], "minimum": 0},
+    "friability_note": {"enum": [null, "<0.05"]},
+    "status": {"enum": ["ok", "failed"]},
+    "failure_reason": {"enum": [null, "press jam", "dispenser clog", "sample lost"]}
+  },
+  "allOf": [
+    {"if": {"properties": {"status": {"const": "failed"}}, "required": ["status"]},
+     "then": {"properties": {"dissolution_30min_pct": {"type": "null"}, "hardness": {"type": "null"}, "friability_pct": {"type": "null"}, "failure_reason": {"type": "string"}}}},
+    {"if": {"properties": {"status": {"const": "ok"}}, "required": ["status"]}, "then": {"properties": {"failure_reason": {"type": "null"}}}}
+  ]
+}

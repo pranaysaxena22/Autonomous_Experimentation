@@ -1,0 +1,83 @@
+{
+  "format_version": 2,
+  "label": "SYNTHETIC EXAMPLE, heavily shortened. Every section of today's run record is either shown (changed or new) or marked unchanged_from_poc.",
+  "data_status": "synthetic",
+  "meta": {
+    "run_id": "example-run",
+    "banner": "Simulation with illustrative values",
+    "start": "2026-10-09 18:00",
+    "end": "2026-10-14 18:00",
+    "seed": 2026,
+    "executor": "python_stand_in",
+    "setup_file": "setup_example.yaml",
+    "layout_file": "cell_layout_example.json",
+    "inputs": [
+      {"file": "setup_example.yaml", "data_status": "illustrative"},
+      {"file": "cell_layout_example.json", "data_status": "illustrative"},
+      {"file": "experiments_example.csv", "data_status": "synthetic"},
+      {"file": "motion_plan_example.json", "data_status": "illustrative"},
+      {"file": "executed_timeline_example.json", "data_status": "illustrative"}
+    ],
+    "data_status_rule": "the record takes the weakest data_status of its inputs (order, weakest to strongest: synthetic, illustrative, real, validated)"
+  },
+  "ingredient_labels": {
+    "drug_pct": "Drug (active)",
+    "binder_pct": "Binder",
+    "disintegrant_pct": "Disintegrant",
+    "lubricant_pct": "Lubricant",
+    "filler_pct": "Filler"
+  },
+  "steps": [
+    {"name": "dispense", "label": "Dispense", "time_min": 30},
+    {"name": "mix", "label": "Mix", "time_min": 45},
+    {"name": "press", "label": "Press", "time_min": 30},
+    {"name": "test", "label": "Test", "time_min": 75},
+    {"name": "clean", "label": "Clean", "time_min": 60}
+  ],
+  "calendar": {"unchanged_from_poc": true, "note": "the same staffed and unattended blocks as today's record"},
+  "data": {
+    "experiments_file": "experiments_example.csv",
+    "meta_file": "experiments_example.meta.json",
+    "rows_read": 12,
+    "rows_used": 12,
+    "quality_report": {
+      "rows_failed_runs": 0,
+      "rows_missing_values": 0,
+      "rows_converted_units": 0,
+      "rows_below_detection": 4,
+      "plain_summary": "12 rows read; all usable. No unit conversions were needed. 4 friability values were below the detection limit (0.05)."
+    }
+  },
+  "model": {
+    "selected": null,
+    "how_chosen": null,
+    "candidates": [
+      {"name": "quadratic_regression", "error_dissolution_30min_pct": null, "error_hardness_kp": null},
+      {"name": "gaussian_process", "error_dissolution_30min_pct": null, "error_hardness_kp": null},
+      {"name": "gradient_boosting", "error_dissolution_30min_pct": null, "error_hardness_kp": null}
+    ],
+    "note": "No model has been trained for this example. Every number is null on purpose so that nothing here can be mistaken for a result."
+  },
+  "trials": [
+    {
+      "trial": 8,
+      "status": "Completed",
+      "recipe": {"drug_pct": 14.1, "filler_pct": 75.8, "binder_pct": 4.3, "disintegrant_pct": 5.2, "lubricant_pct": 0.6, "compression_force_kn": 11.0, "blend_time_min": 18},
+      "why": "Chosen from 7 measured results (illustrative text).",
+      "plan_id": "T008",
+      "plan_file": "motion_plan_example.json",
+      "executed_file": "executed_timeline_example.json",
+      "result": {"dissolution_30min_pct": 88.2, "hardness_kp": 7.9, "friability_pct": 0.31, "verdict": "Good"},
+      "notes": ["Binder bottle jam at the binder pour: tapped and shaken, bottle returned, dispenser purged for 60 min, retried successfully."],
+      "other_fields": "start_minute, end_minute, steps, phases, margin and the rest are as in today's trial record, with platform ids (see docs/naming.md)"
+    }
+  ],
+  "events": {"unchanged_from_poc": true, "note": "the same event list as today's record"},
+  "alerts": {"unchanged_from_poc": true, "note": "the same alert list as today's record"},
+  "handovers": {"unchanged_from_poc": true, "note": "the same overnight summaries as today's record"},
+  "summary": {"unchanged_from_poc": true, "note": "the same summary fields (attempts, results, trials per week, headline)"},
+  "snapshots": {"unchanged_from_poc": true, "note": "one display-ready snapshot per moment, as today; each will also name the motion-plan action in progress"},
+  "comparison": {"unchanged_from_poc": true, "note": "the same strategy comparison as today's record"},
+  "comparison_with_faults": {"unchanged_from_poc": true, "note": "the same comparison with the scripted faults applied"},
+  "about": {"unchanged_from_poc": true, "note": "the same shows / does-not-show text, plus a new 'data and model' section"}
+}

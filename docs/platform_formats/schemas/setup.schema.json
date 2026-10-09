@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Setup file (format version 1)",
+  "description": "Everything a client fills in on the setup screens. Required fields must be present; fields not listed here are refused, which catches typing mistakes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format_version", "project", "batch_size_g", "ingredients", "recipe_rules", "process_factors", "context_factors", "targets", "equipment", "calendar", "faults", "baseline", "comparison", "engine", "seeds", "data"],
+  "properties": {
+    "format_version": {"const": 1},
+    "project": {
+      "type": "object", "additionalProperties": false, "required": ["name", "data_status"],
+      "properties": {"name": {"type": "string", "minLength": 1}, "data_status": {"$ref": "#/$defs/data_status"}}
+    },
+    "display": {
+      "type": "object", "additionalProperties": false, "required": ["banner", "accent_colour", "font"],
+      "properties": {"banner": {"type": "string", "minLength": 1}, "accent_colour": {"type": "string", "pattern": "^#[0-9A-Fa-f]{6}$"}, "font": {"type": "string", "minLength": 1}}
+    },
+    "batch_size_g": {"type": "number", "exclusiveMinimum": 0, "description": "grams of powder blend made in each trial"},
+    "ingredients": {
+      "type": "array", "minItems": 2,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["id", "label", "role", "unit", "min", "max"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[a-z][a-z0-9_]*_pct$"},
+          "label": {"type": "string", "minLength": 1},
+          "role": {"enum": ["active", "binder", "disintegrant", "lubricant", "diluent", "balance", "other"]},
+          "unit": {"const": "%"},
+          "min": {"type": "number", "minimum": 0, "maximum": 100},
+          "max": {"type": "number", "minimum": 0, "maximum": 100}
+        }
+      }
+    },
+    "recipe_rules": {
+      "type": "array",
+      "items": {
+        "type": "object", "required": ["rule", "unit", "label"],
+        "properties": {
+          "rule": {"enum": ["sum_to", "at_most", "at_least"]}, "unit": {"const": "%"}, "label": {"type": "string", "minLength": 1},
+          "total": {"type": "number"}, "tolerance": {"type": "number", "minimum": 0},
+          "items": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/id"}}, "limit": {"type": "number"}
+        },
+        "additionalProperties": false,
+        "allOf": [
+          {"if": {"properties": {"rule": {"const": "sum_to"}}, "required": ["rule"]}, "then": {"required": ["total", "tolerance"]}},
+          {"if": {"properties": {"rule": {"enum": ["at_most", "at_least"]}}, "required": ["rule"]}, "then": {"required": ["items", "limit"]}}
+        ]
+      }
+    },
+    "process_factors": {
+      "type": "array",
+      "items": {"type": "object", "additionalProperties": false, "required": ["id", "label", "unit", "min", "max"],
+                "properties": {"id": {"$ref": "#/$defs/id"}, "label": {"type": "string"}, "unit": {"type": "string", "minLength": 1}, "min": {"type": "number"}, "max": {"type": "number"}}}
+    },
+    "context_factors": {
+      "type": "array",
+      "items": {"type": "object", "additionalProperties": false, "required": ["id", "label", "values"],
+                "properties": {"id": {"$ref": "#/$defs/id"}, "label": {"type": "string"}, "values": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}}}}
+    },
+    "targets": {
+      "type": "object", "additionalProperties": false, "required": ["constraints", "objectives"],
+      "properties": {
+        "constraints": {
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["response", "label", "unit", "goal"],
+            "properties": {
+              "response": {"$ref": "#/$defs/id"}, "label": {"type": "string"}, "unit": {"type": "string", "minLength": 1},
+              "goal": {"enum": ["at_least", "at_most", "between"]},
+              "value": {"type": "number"}, "low": {"type": "number"}, "high": {"type": "number"},
+              "required": {"type": "boolean"}, "margin_scale": {"type": "number", "exclusiveMinimum": 0}
+            },
+            "allOf": [
+              {"if": {"properties": {"goal": {"enum": ["at_least", "at_most"]}}, "required": ["goal"]}, "then": {"required": ["value"]}},
+              {"if": {"properties": {"goal": {"const": "between"}}, "required": ["goal"]}, "then": {"required": ["low", "high"]}}
+            ]
+          }
+        },
+        "objectives": {
+          "type": "array",
+          "items": {"type": "object", "additionalProperties": false, "required": ["quantity", "label", "unit", "goal"],
+                    "properties": {"quantity": {"$ref": "#/$defs/id"}, "label": {"type": "string"}, "unit": {"type": "string", "minLength": 1}, "goal": {"enum": ["maximise", "minimise"]}}}
+        }
+      }
+    },
+    "equipment": {
+      "type": "object", "additionalProperties": false, "required": ["layout_file", "steps", "measurement_step", "phases"],
+      "properties": {
+        "layout_file": {"$ref": "#/$defs/relative_path"},
+        "steps": {"type": "array", "minItems": 1,
+                  "items": {"type": "object", "additionalProperties": false, "required": ["name", "label", "time_min", "stations"],
+                            "properties": {"name": {"$ref": "#/$defs/step"}, "label": {"type": "string"}, "time_min": {"type": "number", "exclusiveMinimum": 0},
+                                           "stations": {"type": "array", "items": {"$ref": "#/$defs/id"}}}}},
+        "measurement_step": {"$ref": "#/$defs/step"},
+        "phases": {"type": "object", "additionalProperties": false, "required": ["act", "sense", "reason_adapt_step", "reason_min"],
+                   "properties": {"act": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/step"}}, "sense": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/step"}},
+                                  "reason_adapt_step": {"$ref": "#/$defs/step"}, "reason_min": {"type": "number", "exclusiveMinimum": 0}}}
+      }
+    },
+    "calendar": {
+      "type": "object", "additionalProperties": false, "required": ["start", "duration_h", "staffed_days", "staffed_from", "staffed_until"],
+      "properties": {
+        "start": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}$"}, "duration_h": {"type": "number", "exclusiveMinimum": 0},
+        "staffed_days": {"type": "array", "uniqueItems": true, "items": {"enum": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]}},
+        "staffed_from": {"type": "string", "pattern": "^\\d{2}:\\d{2}$"}, "staffed_until": {"type": "string", "pattern": "^\\d{2}:\\d{2}$"}
+      }
+    },
+    "faults": {
+      "type": "object", "additionalProperties": false, "required": ["purge_min", "clean_after_skip", "recovery", "scripted", "random"],
+      "properties": {
+        "purge_min": {"type": "number", "exclusiveMinimum": 0}, "clean_after_skip": {"type": "boolean"},
+        "recovery": {"type": "object", "additionalProperties": false, "required": ["tap_shake_s", "max_retries"],
+                     "properties": {"tap_shake_s": {"type": "number", "minimum": 0}, "max_retries": {"type": "integer", "minimum": 0}}},
+        "scripted": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["trial", "where", "cause", "retry_succeeds"],
+                     "properties": {"trial": {"type": "integer", "minimum": 1}, "where": {"$ref": "#/$defs/where"}, "cause": {"type": "string", "minLength": 1}, "retry_succeeds": {"type": "boolean"}}}},
+        "random": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["where", "cause", "chance_per_trial", "retry_succeeds_chance"],
+                   "properties": {"where": {"$ref": "#/$defs/where"}, "cause": {"type": "string", "minLength": 1},
+                                  "chance_per_trial": {"type": "number", "minimum": 0, "maximum": 1, "description": "a probability from 0 to 1; used only for random faults"},
+                                  "retry_succeeds_chance": {"type": "number", "minimum": 0, "maximum": 1, "description": "a probability from 0 to 1; used only for random faults"}}}}
+      }
+    },
+    "baseline": {"type": "object", "additionalProperties": false, "required": ["manual_trials_per_week"], "properties": {"manual_trials_per_week": {"type": "number", "exclusiveMinimum": 0}}},
+    "comparison": {"type": "object", "additionalProperties": false, "required": ["campaigns", "trials_per_campaign"],
+                   "properties": {"campaigns": {"type": "integer", "minimum": 1}, "trials_per_campaign": {"type": "integer", "minimum": 1}}},
+    "engine": {"type": "object", "additionalProperties": false, "required": ["initial_recipes", "candidates_per_decision", "model"],
+               "properties": {"initial_recipes": {"type": "integer", "minimum": 1}, "candidates_per_decision": {"type": "integer", "minimum": 1}, "model": {"type": "string", "minLength": 1}}},
+    "virtual_lab": {"type": "object", "additionalProperties": false, "required": ["noise"],
+                    "properties": {"noise": {"type": "array", "minItems": 1,
+                                             "items": {"type": "object", "additionalProperties": false, "required": ["quantity", "sd"],
+                                                       "properties": {"quantity": {"$ref": "#/$defs/id"}, "sd": {"type": "number", "minimum": 0, "description": "standard deviation, in the quantity's own unit"}}}}}},
+    "seeds": {"type": "object", "additionalProperties": false, "required": ["run"], "properties": {"run": {"type": "integer"}}},
+    "data": {
+      "type": "object", "additionalProperties": false,
+      "required": ["experiments_file", "meta_file", "encoding", "line_endings", "id_columns", "column_map", "hardness", "below_detection", "replicates", "missing_values", "failed_runs"],
+      "properties": {
+        "experiments_file": {"$ref": "#/$defs/relative_path"}, "meta_file": {"$ref": "#/$defs/relative_path"},
+        "encoding": {"type": "string"}, "line_endings": {"enum": ["any", "lf", "crlf"]},
+        "id_columns": {"type": "object", "additionalProperties": {"type": "string"}, "required": ["experiment", "replicate", "batch", "date", "status", "failure_reason"]},
+        "column_map": {"type": "object", "minProperties": 1, "additionalProperties": {"$ref": "#/$defs/id"}},
+        "hardness": {"type": "object", "additionalProperties": false, "required": ["value_column", "unit_column", "to", "conversions"],
+                     "properties": {"value_column": {"type": "string"}, "unit_column": {"type": "string"}, "to": {"$ref": "#/$defs/id"},
+                                    "conversions": {"type": "object", "minProperties": 1, "additionalProperties": {"type": "object", "additionalProperties": false, "required": ["divide_by"], "properties": {"divide_by": {"type": "number", "exclusiveMinimum": 0}}}}}},
+        "below_detection": {"type": "object", "additionalProperties": false, "required": ["note_column", "marker", "quantity", "limit", "rule"],
+                            "properties": {"note_column": {"type": "string"}, "marker": {"type": "string", "minLength": 1}, "quantity": {"$ref": "#/$defs/id"}, "limit": {"type": "number", "minimum": 0},
+                                           "rule": {"enum": ["use_limit_and_flag", "use_half_limit", "treat_as_missing"]}}},
+        "replicates": {"type": "object", "additionalProperties": false, "required": ["group_by", "rule", "keep_individual_rows_for_noise_estimate"],
+                       "properties": {"group_by": {"type": "array", "minItems": 1, "items": {"type": "string"}}, "rule": {"enum": ["mean", "median", "keep_all"]}, "keep_individual_rows_for_noise_estimate": {"type": "boolean"}}},
+        "missing_values": {"type": "object", "additionalProperties": false, "required": ["policy"], "properties": {"policy": {"enum": ["skip_for_that_response", "drop_row", "fail"]}}},
+        "failed_runs": {"type": "object", "additionalProperties": false, "required": ["status_column", "failed_value", "policy"],
+                        "properties": {"status_column": {"type": "string"}, "failed_value": {"type": "string"}, "policy": {"enum": ["exclude_from_models_keep_in_failure_statistics", "exclude", "keep"]}}}
+      }
+    }
+  },
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+    "step": {"enum": ["dispense", "mix", "press", "test", "clean"]},
+    "data_status": {"enum": ["synthetic", "illustrative", "real", "validated"]},
+    "relative_path": {"type": "string", "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?!.*(^|[/\\\\])\\.\\.([/\\\\]|$))[^:*?\"<>|]+$", "description": "a path relative to this file: not absolute, no drive letter, no '..'"},
+    "where": {
+      "type": "object", "additionalProperties": false, "required": ["step", "action"],
+      "properties": {"step": {"$ref": "#/$defs/step"}, "action": {"enum": ["move", "pick", "place", "pour", "shake", "press", "stir", "scan", "read", "wait"]}, "ingredient": {"type": "string", "pattern": "^[a-z][a-z0-9_]*_pct$"}}
+    }
+  }
+}

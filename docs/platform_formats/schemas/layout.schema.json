@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Cell layout (format version 1)",
+  "description": "Where everything is in the cell. Units: metres and degrees; heights are metres above the floor.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format_version", "label", "data_status", "layout_id", "units", "robot", "table", "stations", "bottle_shelf", "tool_holders", "objects", "camera_presets"],
+  "properties": {
+    "format_version": {"const": 1},
+    "label": {"type": "string", "minLength": 1},
+    "data_status": {"enum": ["synthetic", "illustrative", "real", "validated"]},
+    "layout_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+    "units": {"type": "string", "pattern": "metres and degrees"},
+    "robot": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "type", "base_m", "shoulder_height_m", "links_m", "reach_m", "safe_height_m", "home", "grip"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"}, "type": {"type": "string"},
+        "base_m": {"type": "object", "additionalProperties": false, "required": ["x", "y", "z"], "properties": {"x": {"type": "number"}, "y": {"type": "number"}, "z": {"type": "number"}}},
+        "shoulder_height_m": {"type": "number", "exclusiveMinimum": 0},
+        "links_m": {"type": "object", "additionalProperties": false, "required": ["upper_arm", "forearm", "wrist_to_tip"],
+                    "properties": {"upper_arm": {"type": "number", "exclusiveMinimum": 0}, "forearm": {"type": "number", "exclusiveMinimum": 0}, "wrist_to_tip": {"type": "number", "minimum": 0}}},
+        "reach_m": {"type": "number", "exclusiveMinimum": 0}, "safe_height_m": {"type": "number", "exclusiveMinimum": 0},
+        "home": {"type": "object", "additionalProperties": false, "required": ["angle_deg", "radius_m", "height_m"], "properties": {"angle_deg": {"type": "number"}, "radius_m": {"type": "number", "minimum": 0}, "height_m": {"type": "number"}}},
+        "grip": {"type": "string"}
+      }
+    },
+    "table": {"type": "object", "additionalProperties": false, "required": ["shape", "radius_m", "height_m"],
+              "properties": {"shape": {"enum": ["circle"]}, "radius_m": {"type": "number", "exclusiveMinimum": 0}, "height_m": {"type": "number", "minimum": 0}}},
+    "stations": {
+      "type": "array", "minItems": 1,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["id", "type", "label", "position", "work_height_m"],
+        "properties": {
+          "id": {"$ref": "#/$defs/id"}, "type": {"type": "string"}, "label": {"type": "string"}, "position": {"$ref": "#/$defs/position"}, "work_height_m": {"type": "number"},
+          "instrument": {"type": "object", "additionalProperties": false, "required": ["reads", "passive"], "properties": {"reads": {"$ref": "#/$defs/quantity"}, "passive": {"type": "boolean"}}}
+        }
+      }
+    },
+    "bottle_shelf": {
+      "type": "object", "additionalProperties": false, "required": ["id", "slots"],
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "slots": {"type": "array", "minItems": 1,
+                  "items": {"type": "object", "additionalProperties": false, "required": ["id", "ingredient_id", "bottle", "position", "work_height_m"],
+                            "properties": {"id": {"type": "string", "pattern": "^slot_[0-9]+$"}, "ingredient_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]*_pct$"}, "bottle": {"$ref": "#/$defs/id"},
+                                           "position": {"$ref": "#/$defs/position"}, "work_height_m": {"type": "number"}}}}
+      }
+    },
+    "tool_holders": {
+      "type": "array",
+      "items": {"type": "object", "additionalProperties": false, "required": ["id", "tool", "station", "position", "work_height_m"],
+                "properties": {"id": {"$ref": "#/$defs/id"}, "tool": {"$ref": "#/$defs/id"}, "station": {"$ref": "#/$defs/id"}, "position": {"$ref": "#/$defs/position"}, "work_height_m": {"type": "number"}}}
+    },
+    "objects": {
+      "type": "array", "minItems": 1,
+      "items": {"type": "object", "additionalProperties": false, "required": ["id", "type", "starts_at"],
+                "properties": {"id": {"$ref": "#/$defs/id"}, "type": {"enum": ["vial", "tablet", "bottle", "tool"]}, "starts_at": {"type": ["string", "null"]},
+                               "ingredient_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]*_pct$"}, "created_by": {"$ref": "#/$defs/id"}}}
+    },
+    "camera_presets": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/id"}}
+  },
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+    "quantity": {"type": "string", "pattern": "^(barcode|[a-z][a-z0-9_]*_(g|pct|kp|kn|min|s))$"},
+    "position": {"type": "object", "additionalProperties": false, "required": ["angle_deg", "radius_m"], "properties": {"angle_deg": {"type": "number"}, "radius_m": {"type": "number", "minimum": 0}}}
+  }
+}

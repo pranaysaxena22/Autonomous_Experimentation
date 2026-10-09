@@ -1,0 +1,21 @@
+{
+  "format_version": 1,
+  "data_status": "synthetic",
+  "label": "SYNTHETIC data made by tools/make_mock_data.py. Not real client data.",
+  "table_file": "experiments_messy_example.csv",
+  "source": "selected rows of data/mock/mock_formulation_hard.csv",
+  "encoding": "utf-8 (no byte-order mark)",
+  "line_endings": "LF",
+  "contains_real_client_data": false,
+  "rows": 26,
+  "columns": 21,
+  "batches": ["B001", "B002", "B003", "B004"],
+  "deliberate_issues": {
+    "failed_runs": 3,
+    "hardness_in_newtons": 4,
+    "missing_dissolution": 2,
+    "missing_friability": 2,
+    "below_detection_notes": 6,
+    "replicate_rows": 6
+  }
+}

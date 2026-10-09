@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Motion plan (format version 1): INTENT ONLY",
+  "description": "What the robot is asked to do for one trial. It contains no outcomes, readings or faults: those belong in the executed timeline. Ten action types: move, pick, place, pour, shake, press, stir, scan, read, wait.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format_version", "label", "data_status", "plan_id", "trial", "trial_start_minute", "layout_id", "batch_size_g", "recipe", "why", "step_totals_s", "time_note", "actions"],
+  "properties": {
+    "format_version": {"const": 1},
+    "label": {"type": "string", "minLength": 1},
+    "data_status": {"enum": ["synthetic", "illustrative", "real", "validated"]},
+    "plan_id": {"type": "string", "pattern": "^T[0-9]{3,}$"},
+    "trial": {"type": "integer", "minimum": 1},
+    "trial_start_minute": {"type": "number", "minimum": 0, "description": "minutes since the start of the run when this trial starts"},
+    "layout_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+    "batch_size_g": {"type": "number", "exclusiveMinimum": 0},
+    "recipe": {"type": "object", "minProperties": 2, "propertyNames": {"pattern": "^[a-z][a-z0-9_]*$"}, "additionalProperties": {"type": "number"}},
+    "why": {"type": "string", "minLength": 1},
+    "step_totals_s": {"type": "object", "additionalProperties": false, "required": ["dispense", "mix", "press", "test", "clean"],
+                      "properties": {"dispense": {"type": "number"}, "mix": {"type": "number"}, "press": {"type": "number"}, "test": {"type": "number"}, "clean": {"type": "number"}}},
+    "time_note": {"type": "string"},
+    "actions": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/action"}}
+  },
+  "$defs": {
+    "id_ref": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "step", "phase", "type", "start_s", "duration_s", "caption"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^A[0-9]{3,}$"},
+        "step": {"enum": ["dispense", "mix", "press", "test", "clean"]},
+        "phase": {"enum": ["act", "sense", "reason", "adapt"]},
+        "type": {"enum": ["move", "pick", "place", "pour", "shake", "press", "stir", "scan", "read", "wait"]},
+        "start_s": {"type": "number", "minimum": 0},
+        "duration_s": {"type": "number", "exclusiveMinimum": 0},
+        "object": {"$ref": "#/$defs/id_ref"},
+        "from": {"$ref": "#/$defs/id_ref"},
+        "to": {"$ref": "#/$defs/id_ref"},
+        "into": {"$ref": "#/$defs/id_ref"},
+        "at": {"$ref": "#/$defs/id_ref"},
+        "amount_g": {"type": "number", "exclusiveMinimum": 0},
+        "style": {"enum": ["mix", "tap"]},
+        "force_kn": {"type": "number", "exclusiveMinimum": 0},
+        "quantity": {"type": "string", "pattern": "^(barcode|[a-z][a-z0-9_]*_(g|pct|kp|kn|min|s))$"},
+        "reason": {"type": "string", "minLength": 1},
+        "caption": {"type": "string", "minLength": 1}
+      },
+      "allOf": [
+        {"if": {"properties": {"type": {"const": "move"}}, "required": ["type"]}, "then": {"required": ["to"]}},
+        {"if": {"properties": {"type": {"const": "pick"}}, "required": ["type"]}, "then": {"required": ["object", "from"]}},
+        {"if": {"properties": {"type": {"const": "place"}}, "required": ["type"]}, "then": {"required": ["object", "to"]}},
+        {"if": {"properties": {"type": {"const": "pour"}}, "required": ["type"]}, "then": {"required": ["object", "into", "at", "amount_g"]}},
+        {"if": {"properties": {"type": {"const": "shake"}}, "required": ["type"]}, "then": {"required": ["object", "style"]}},
+        {"if": {"properties": {"type": {"const": "press"}}, "required": ["type"]}, "then": {"required": ["object", "at", "force_kn"]}},
+        {"if": {"properties": {"type": {"const": "stir"}}, "required": ["type"]}, "then": {"required": ["object", "at"]}},
+        {"if": {"properties": {"type": {"const": "scan"}}, "required": ["type"]}, "then": {"required": ["object", "at"]}},
+        {"if": {"properties": {"type": {"const": "read"}}, "required": ["type"]}, "then": {"required": ["at", "quantity"]}},
+        {"if": {"properties": {"type": {"const": "wait"}}, "required": ["type"]}, "then": {"required": ["reason"]}}
+      ]
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Experiment table companion file (format version 1)",
+  "description": "Carries the version and the synthetic / illustrative / real / validated label that a CSV file cannot carry itself. One per experiment table, named <table>.meta.json.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format_version", "data_status", "label", "table_file", "source", "encoding", "line_endings", "contains_real_client_data", "rows", "columns", "deliberate_issues"],
+  "properties": {
+    "format_version": {"const": 1},
+    "data_status": {"enum": ["synthetic", "illustrative", "real", "validated"]},
+    "label": {"type": "string", "minLength": 1},
+    "table_file": {"type": "string", "pattern": "^(?![A-Za-z]:)(?![/\\\\])(?!.*(^|[/\\\\])\\.\\.([/\\\\]|$))[^:*?\"<>|]+$"},
+    "source": {"type": "string", "minLength": 1},
+    "encoding": {"type": "string"},
+    "line_endings": {"enum": ["LF", "CRLF"]},
+    "contains_real_client_data": {"type": "boolean"},
+    "rows": {"type": "integer", "minimum": 1},
+    "columns": {"type": "integer", "minimum": 1},
+    "batches": {"type": "array", "items": {"type": "string"}},
+    "deliberate_issues": {"type": ["string", "object"]}
+  },
+  "allOf": [
+    {"if": {"properties": {"data_status": {"enum": ["synthetic", "illustrative"]}}, "required": ["data_status"]}, "then": {"properties": {"contains_real_client_data": {"const": false}}}}
+  ]
+}
