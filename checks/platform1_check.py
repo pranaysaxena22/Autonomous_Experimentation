@@ -25,7 +25,7 @@ from cellpoc.setup import (CATALOGUE, PROGRAM_VERSION, FormatSupport, Problem, S
 from cellpoc.setup import rules as rules_module  # noqa: E402
 from cellpoc.setup import units as units_module  # noqa: E402
 from cellpoc.setup.messages import render, rule_for  # noqa: E402
-from checks import architecture, setup_cases, setup_mutation  # noqa: E402
+from checks import architecture, setup_app_tests, setup_cases, setup_mutation  # noqa: E402
 from checks.common import Checklist  # noqa: E402
 from checks.setup_messages_doc import DOC_PATH, build_text  # noqa: E402
 
@@ -353,6 +353,7 @@ def main() -> int:
     convert_checks(cl)
     message_checks(cl)
     housekeeping_checks(cl)
+    setup_app_tests.run(cl)
     architecture.check(cl)
     cl.headline("Setup rules: illustrative example values only; no client data is used by this check.")
     return cl.print()

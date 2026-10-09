@@ -10,11 +10,12 @@ from .files import (PROJECT_ROOT, LoadResult, SetupFileError, example_setup_path
 from .messages import CATALOGUE, Rule
 from .problems import SCREENS, SETUP_FILE_SCREEN, Problem, field_label, has_errors, path_text
 from .schema import options_at
+from .layout_rules import station_ids
 from .units import UNITS, allowed_symbols
 from .validate import problems_at, validate
 from .versions import PROGRAM_VERSION, SETUP_FORMAT_VERSION, FormatSupport
 
 __all__ = ["CATALOGUE", "Conversion", "blank_setup", "field_label", "options_at", "path_text", "FormatSupport", "LoadResult", "Note", "to_poc_settings", "PROGRAM_VERSION", "PROJECT_ROOT", "Problem", "Rule", "SCREENS",
            "SETUP_FILE_SCREEN", "SETUP_FORMAT_VERSION", "SetupFileError", "UNITS", "allowed_symbols", "example_setup_path",
-           "fingerprint", "has_errors", "list_layouts", "load_setup", "path_is_safe", "problems_at", "resolve_reference",
+           "fingerprint", "has_errors", "station_ids", "list_layouts", "load_setup", "path_is_safe", "problems_at", "resolve_reference",
            "save_setup", "validate"]

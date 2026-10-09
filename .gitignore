@@ -8,6 +8,9 @@ runs/
 setups/
 data/client/
 
+# Screenshots of the setup screens (made on demand, uploaded for review, not committed)
+docs/screenshots/
+
 # Python caches
 __pycache__/
 *.pyc

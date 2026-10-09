@@ -49,8 +49,7 @@ must contain no logic, only replay a plan, and must bundle everything it needs (
 **Screenshot testing.** Microsoft Edge headless mode is blocked by the company's admin policy. **Google Chrome headless works**
 with software rendering (`--headless=new --use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader --screenshot=...`):
 a test run rendered the reference viewer's 3D scene. Remote scripting (DevTools) is blocked, so the viewer must accept the
-moment to show as a URL parameter. Streamlit pages did not render in a headless screenshot (they need a live session), so the
-dashboard and setup app are checked by Streamlit's test harness plus a checklist by eye.
+moment to show as a URL parameter. Streamlit pages DO render in a headless Chrome screenshot of a running local app when given a long virtual wait (`--virtual-time-budget=600000`; 60 seconds was too short and gave blank or half-drawn pictures), so the setup screens can be photographed (`tools/take_setup_screenshots.py`). The dashboard and setup app are still checked by Streamlit's test harness plus a checklist by eye, because the harness cannot judge appearance.
 
 ## 3. Architecture and rules
 - **Parts:** settings/setup, virtual lab, cell simulator, decision engine, dashboard (the five from the PoC), plus new
