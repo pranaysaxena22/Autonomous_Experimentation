@@ -26,8 +26,14 @@ ALLOWED = {
     "dashboard": {"run_store", "contracts"},          # it only reads the run record
     "runner": {"settings", "contracts", "virtual_lab", "decision_engine", "cell_simulator", "run_store",
                "comparison", "about_text"},
+    # platform parts (Stage 1): setting up a study. They share nothing with the run, the lab or the engine.
+    "formats": set(),                                 # schemas and examples: data files only
+    "setup": set(),                                   # reading, saving and checking a setup
+    "setup_app": {"setup"},                           # the setup screens only show what setup decides
 }
 PARTS = set(ALLOWED)
+NETWORK_MODULES = {"requests", "urllib", "urllib3", "http", "httpx", "socket", "ftplib", "smtplib", "aiohttp", "websocket", "websockets"}
+NO_NETWORK = ("setup", "setup_app")                   # parts that handle study setups never talk to the network
 HIDDEN = ("_truth", "oracle")  # modules only the virtual lab itself and the after-the-fact scoring may touch
 MAY_SEE_TRUTH = {"virtual_lab", "scoring"}
 
@@ -100,6 +106,20 @@ def dashboard_problems() -> tuple[list[str], int]:
     return problems, len(files)
 
 
+def network_problems() -> list[str]:
+    """Imports of network libraries inside the setup parts (client data must never leave this computer)."""
+    problems: list[str] = []
+    for part in NO_NETWORK:
+        for path in sorted((PACKAGE / part).rglob("*.py")) if (PACKAGE / part).exists() else []:
+            for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+                modules = ([a.name for a in node.names] if isinstance(node, ast.Import)
+                           else ([node.module] if isinstance(node, ast.ImportFrom) and node.module and node.level == 0 else []))
+                for module in modules:
+                    if module.split(".")[0] in NETWORK_MODULES:
+                        problems.append(f"{path.relative_to(PACKAGE).as_posix()} line {node.lineno}: imports {module}")
+    return problems
+
+
 def check(checklist: Checklist) -> None:
     breaches: list[str] = []
     scanned = 0
@@ -118,6 +138,9 @@ def check(checklist: Checklist) -> None:
                 breaches.append(f"{relative} reaches into the virtual lab's hidden truth")
     checklist.record(not breaches, "Each part imports only the parts it is allowed to",
                      "; ".join(breaches) if breaches else f"{scanned} source files scanned")
+    network = network_problems()
+    checklist.record(not network, "The setup parts never use the network (no web, socket or mail libraries)",
+                     "; ".join(network[:6]) if network else "setup and setup_app files read")
     for part in ("decision_engine", "dashboard"):
         if (PACKAGE / part).exists():
             checklist.record("virtual_lab" not in ALLOWED[part], f"The {part.replace('_', ' ')} cannot see the virtual lab",

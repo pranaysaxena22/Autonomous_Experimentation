@@ -1,0 +1,6 @@
+# Data and format files keep Unix line endings on every computer, so the fingerprints and the
+# "docs copy equals package copy" checks give the same answer everywhere.
+*.csv   text eol=lf
+*.json  text eol=lf
+*.yaml  text eol=lf
+*.yml   text eol=lf
