@@ -17,7 +17,6 @@ import dataclasses
 import io
 import itertools
 import json
-import math
 import re
 import sys
 from datetime import datetime, timedelta
@@ -29,6 +28,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from cellpoc.setup.layout_rules import REACH_FAIL_M, REACH_WARN_M, reach_policy, reach_report  # noqa: E402
 from checks.common import Checklist  # noqa: E402
 
 D = ROOT / "docs" / "platform_formats"
@@ -198,32 +198,9 @@ def phase_problems(actions: list[dict], setup: dict, start_key: str) -> list[str
     return problems
 
 
-def reach_report(layout: dict) -> tuple[float, str, list[str]]:
-    """3D reach from the shoulder to every location at its working height and at the safe height. Returns (tightest margin, where, problems)."""
-    r = layout["robot"]
-    arm = r["links_m"]["upper_arm"] + r["links_m"]["forearm"]
-    items = ([(s["id"], s["position"]["radius_m"], s["work_height_m"]) for s in layout["stations"]]
-             + [(s["id"], s["position"]["radius_m"], s["work_height_m"]) for s in layout["bottle_shelf"]["slots"]]
-             + [(h["id"], h["position"]["radius_m"], h["work_height_m"]) for h in layout["tool_holders"]])
-    worst, where, problems = 1e9, "", []
-    for name, radius, height in items:
-        for label, h in (("working height", height), ("safe height", r["safe_height_m"])):
-            d = math.hypot(radius, h + r["links_m"]["wrist_to_tip"] - r["shoulder_height_m"])
-            margin = arm - d
-            if margin < worst:
-                worst, where = margin, f"{name} at {label} (distance {d:.3f} m of {arm:.2f} m)"
-            if margin < 0:
-                problems.append(f"{name} at {label} is {-margin:.3f} m beyond the arm's reach")
-    return worst, where, problems
-
-
-REACH_WARN_M, REACH_FAIL_M = 0.10, 0.03     # spare reach policy: warn below 0.10 m, fail below 0.03 m
+# The reach calculation and the spare-reach policy (warn below 0.10 m, fail below 0.03 m) now live in
+# cellpoc/setup/layout_rules.py, so the setup app and this check use the very same code.
 VAGUE_WORDS = {"wait", "waiting", "idle", "filler", "padding", "pause", "delay", "pending", "tbd", "todo"}
-
-
-def reach_policy(spare_m: float) -> str:
-    """'pass' at 0.10 m of spare reach or more, 'warn' from 0.03 m up to (not including) 0.10 m, 'fail' below 0.03 m."""
-    return "fail" if spare_m < REACH_FAIL_M else ("warn" if spare_m < REACH_WARN_M else "pass")
 
 
 def wait_reason_problems(actions: list[dict]) -> list[str]:

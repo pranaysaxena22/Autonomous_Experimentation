@@ -6,10 +6,19 @@
   "additionalProperties": false,
   "required": ["format_version", "project", "batch_size_g", "ingredients", "recipe_rules", "process_factors", "context_factors", "targets", "equipment", "calendar", "faults", "baseline", "comparison", "engine", "seeds", "data"],
   "properties": {
-    "format_version": {"const": 1},
+    "format_version": {"type": "integer", "minimum": 1, "description": "Which version of this format the file is in. The program checks that it can read that version before applying the rest of this schema."},
+    "saved": {
+      "type": "object", "additionalProperties": false, "required": ["saved_at", "program_version", "content_sha256"],
+      "description": "Added by the setup app when a setup is saved. No names of people: only when, with which program version, and a fingerprint of the content.",
+      "properties": {
+        "saved_at": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"},
+        "program_version": {"type": "string", "minLength": 1, "maxLength": 40},
+        "content_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
     "project": {
       "type": "object", "additionalProperties": false, "required": ["name", "data_status"],
-      "properties": {"name": {"type": "string", "minLength": 1}, "data_status": {"$ref": "#/$defs/data_status"}}
+      "properties": {"name": {"type": "string", "minLength": 1, "maxLength": 80}, "data_status": {"$ref": "#/$defs/data_status"}}
     },
     "display": {
       "type": "object", "additionalProperties": false, "required": ["banner", "accent_colour", "font"],
