@@ -5,6 +5,7 @@ Prints a PASS/FAIL list in plain words. Every check is scripted; nothing is writ
   D  experiment tables   E  run record                            F  all files together
   G  schemas             H  safe reading and safe paths           I  naming rules
   J  can the PoC settings be built from the setup (converter feasibility)
+  K  the schemas and four example files live in the package; docs copies must be identical
   S  self-tests: deliberately broken copies must be caught (so a PASS means something)
 All files are ILLUSTRATIVE or SYNTHETIC examples. Nothing here is real client data.
 """
@@ -31,7 +32,10 @@ sys.path.insert(0, str(ROOT))
 from checks.common import Checklist  # noqa: E402
 
 D = ROOT / "docs" / "platform_formats"
-SCHEMAS = D / "schemas"
+PACKAGE = ROOT / "cellpoc" / "formats"
+SCHEMAS = PACKAGE / "schemas"                    # the schemas live in the package; docs keeps only a pointer
+EXAMPLES = PACKAGE / "examples"                  # master copies of the four files programs read at run time
+MASTER_COPIES = ["setup_example.yaml", "cell_layout_example.json", "experiments_example.csv", "experiments_example.meta.json"]
 MOCK = ROOT / "data" / "mock"
 FILES = {"setup": "setup_example.yaml", "plan": "motion_plan_example.json", "executed": "executed_timeline_example.json",
          "layout": "cell_layout_example.json", "record": "run_record_v2_example.json",
@@ -539,7 +543,8 @@ def main() -> int:
         and sorted(S["equipment"]["phases"]["act"] + S["equipment"]["phases"]["sense"] + [S["equipment"]["phases"]["reason_adapt_step"]]) == sorted(steps),
         "Steps, stations and trial numbers agree across the files: the same five step names; every station an action uses is listed under its step in the setup; trial 8 everywhere; trial start = (trial - 1) x one trial's length",
         f"stray stations: {stray or 'none'}; trial_start_minute {P['trial_start_minute']:g} = 7 x {kfirst / 60:g} min")
-    texts = {n: read_text(D / n) for n in list(FILES.values()) + ["README.md"] + [f"schemas/{s}" for s in SCHEMA_FILES.values()]}
+    texts = {n: read_text(D / n) for n in list(FILES.values()) + ["README.md"]}
+    texts.update({f"schemas/{s}": read_text(SCHEMAS / s) for s in SCHEMA_FILES.values()})
     texts["naming.md"] = read_text(ROOT / "docs" / "naming.md")
     # absolute-path patterns (drive letters, user folders, network paths) apply to every file except the schemas, whose regular expressions
     # legitimately contain backslashes; the personal-name and address patterns apply to all files
@@ -561,6 +566,17 @@ def main() -> int:
     rec("F7", story_disk == story_now and "jam" in story_disk and "FAILED" in story_disk and "purge the dispenser" in story_disk and story_disk.count("| recovery |") == len(rec_acts),
         "trial8_story.md matches the executed timeline exactly (it is regenerated from the timeline and compared) and tells the jam, the purge and the retry",
         f"{len(story_disk.splitlines())} lines; {story_disk.count('| planned |')} planned and {story_disk.count('| recovery |')} recovery rows" if story_disk == story_now else "the file differs from what the timeline produces: run tools/make_trial_story.py")
+
+    # ---------- K package copies and docs copies
+    differing = [n for n in MASTER_COPIES if (D / n).read_bytes() != (EXAMPLES / n).read_bytes()]
+    rec("K1", not differing and all((EXAMPLES / n).exists() for n in MASTER_COPIES),
+        "The docs copies of the four runtime example files are byte-for-byte identical to the master copies in the package",
+        f"{len(MASTER_COPIES)} files compared; differing: {differing or 'none'}")
+    docs_schemas = sorted(p.name for p in (D / "schemas").glob("*")) if (D / "schemas").exists() else []
+    rec("K2", docs_schemas == ["MOVED.md"] and all((SCHEMAS / s).exists() for s in SCHEMA_FILES.values()),
+        "The seven schemas live in the package and docs keeps only a pointer (MOVED.md)", f"package schemas: {len(SCHEMA_FILES)}; docs folder holds: {docs_schemas}")
+    pkg_files = sorted(p.name for p in EXAMPLES.glob("*"))
+    rec("K3", pkg_files == sorted(MASTER_COPIES), "The package examples folder holds exactly the four runtime example files, nothing else", f"{pkg_files}")
 
     # ---------- G schemas
     rec("G1", Draft202012Validator is not None, "The schema library (jsonschema) works with this Python version and is installed", f"jsonschema {SCHEMA_LIB} on Python {sys.version.split()[0]}")
@@ -671,6 +687,8 @@ def main() -> int:
     no_fr = mutate(S, lambda d: (d["targets"]["objectives"].__delitem__(0), d["targets"]["constraints"][2].__setitem__("required", False)))
     fp2 = friability_problems(no_fr, pa)
     rec("S16", bool(fp2) and not friability_problems(S, pa), "Self-test: a setup that no longer needs friability, with a plan that still measures it, is caught", fp2[0] if fp2 else "NOT CAUGHT")
+    copy_bytes = (D / MASTER_COPIES[0]).read_bytes() + b"# edited"
+    rec("S18", copy_bytes != (EXAMPLES / MASTER_COPIES[0]).read_bytes(), "Self-test: a docs copy that was edited by hand no longer equals the package copy, so it would be caught", "")
     tampered = mutate(E, lambda d: d["result"].__setitem__("hardness_kp", 6.5))
     rec("S17", make_trial_story.build_story(tampered, L, S) != story_now, "Self-test: changing a number in the timeline changes the story, so a stale story file would be caught", "")
 

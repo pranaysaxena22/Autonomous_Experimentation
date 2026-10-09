@@ -2,7 +2,7 @@
 #  SETUP FILE (proposed format, version 1) - ILLUSTRATIVE EXAMPLE
 #  Everything a client fills in on the setup screens is saved as this one file.
 #  All values here are illustrative placeholders, not real client data.
-#  Naming rules: docs/naming.md.  Machine-readable rules: schemas/setup.schema.json.
+#  Naming rules: docs/naming.md.  Machine-readable rules: cellpoc/formats/schemas/setup.schema.json.
 # =====================================================================
 format_version: 1
 

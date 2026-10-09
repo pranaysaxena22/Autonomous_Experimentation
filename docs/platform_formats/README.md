@@ -14,7 +14,9 @@ Naming rules and mappings: `docs/naming.md`.
 | `executed_timeline_example.json` | **What happened** for the same trial (T008): the same actions with actual times and outcomes, a binder-bottle jam, and its recovery actions | the executor | the 3D viewer, the run record |
 | `trial8_story.md` | A plain-language table of the executed timeline: time, action, object, station or slot, planned or recovery, and why. **Generated** by `tools/make_trial_story.py` and checked against the timeline | the script | people reading the example |
 | `run_record_v2_example.json` | The run record with the new data, model and motion-plan sections; unchanged sections are marked | the cell simulator | the dashboard, reports |
-| `schemas/*.schema.json` | Machine-readable rules (JSON Schema): required and optional fields and allowed values, one per format | us | `check_formats.bat`, the setup screens |
+| `cellpoc/formats/schemas/*.schema.json` (moved; see `schemas/MOVED.md` here) | Machine-readable rules (JSON Schema): required and optional fields and allowed values, one per format | us | `check_formats.bat`, the setup screens |
+
+**Master copies.** Four files are read by programs while they run, so their master copies are in the package, in `cellpoc/formats/examples/`: `setup_example.yaml`, `cell_layout_example.json`, `experiments_example.csv` and `experiments_example.meta.json`. The copies in this folder are identical (the other examples refer to them by relative path); `check_formats.bat` fails if a copy differs. Change the master, then copy it here.
 
 The plan and the executed timeline describe the same trial. The plan is the same for any trial of that recipe; the executed timeline
 is where a fault shows up, because the plan never contains faults.

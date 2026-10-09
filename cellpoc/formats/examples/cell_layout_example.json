@@ -1,0 +1,70 @@
+{
+  "format_version": 1,
+  "label": "ILLUSTRATIVE layout (modelled on reference/robot_cell_viewer_reference.html, with a friability tester added)",
+  "data_status": "illustrative",
+  "layout_id": "robot_cell_v1",
+  "units": "metres and degrees; angle 0 = to the right, counter-clockwise; the robot base is at the centre; heights are metres above the floor",
+  "robot": {
+    "id": "arm1",
+    "type": "generic_arm_3_segments",
+    "base_m": {
+      "x": 0,
+      "y": 0.5,
+      "z": 0
+    },
+    "shoulder_height_m": 0.9,
+    "links_m": {
+      "upper_arm": 0.72,
+      "forearm": 0.72,
+      "wrist_to_tip": 0.2
+    },
+    "reach_m": 1.44,
+    "safe_height_m": 1.1,
+    "home": {
+      "angle_deg": 90,
+      "radius_m": 0.55,
+      "height_m": 1.3
+    },
+    "grip": "two_finger"
+  },
+  "table": {
+    "shape": "circle",
+    "radius_m": 1.82,
+    "height_m": 0.5
+  },
+  "stations": [
+    {"id": "rack", "type": "vial_rack_with_scanner", "label": "Rack and scanner", "position": {"angle_deg": 180, "radius_m": 1.0}, "work_height_m": 0.69, "instrument": {"reads": "barcode", "passive": true}},
+    {"id": "balance", "type": "balance", "label": "Balance", "position": {"angle_deg": 144, "radius_m": 1.0}, "work_height_m": 0.73, "instrument": {"reads": "mass_g", "passive": true}},
+    {"id": "press", "type": "hand_press", "label": "Hand press", "position": {"angle_deg": 108, "radius_m": 1.0}, "work_height_m": 0.72},
+    {"id": "gauge", "type": "hardness_gauge", "label": "Hardness gauge", "position": {"angle_deg": 72, "radius_m": 1.0}, "work_height_m": 0.58, "instrument": {"reads": "hardness_kp", "passive": true}},
+    {"id": "friabilator", "type": "friability_tester", "label": "Friability tester", "position": {"angle_deg": 54, "radius_m": 1.0}, "work_height_m": 0.58, "instrument": {"reads": "friability_pct", "passive": true}},
+    {"id": "vessel", "type": "dissolution_vessel", "label": "Dissolution vessel", "position": {"angle_deg": 36, "radius_m": 1.0}, "work_height_m": 0.9, "instrument": {"reads": "dissolution_30min_pct", "passive": true}},
+    {"id": "discard", "type": "discard_bin", "label": "Discard bin", "position": {"angle_deg": 0, "radius_m": 1.0}, "work_height_m": 0.95}
+  ],
+  "bottle_shelf": {
+    "id": "bottle_shelf",
+    "slots": [
+      {"id": "slot_1", "ingredient_id": "drug_pct", "bottle": "bottle_drug", "position": {"angle_deg": 130, "radius_m": 1.3}, "work_height_m": 0.6},
+      {"id": "slot_2", "ingredient_id": "filler_pct", "bottle": "bottle_filler", "position": {"angle_deg": 137, "radius_m": 1.3}, "work_height_m": 0.6},
+      {"id": "slot_3", "ingredient_id": "binder_pct", "bottle": "bottle_binder", "position": {"angle_deg": 144, "radius_m": 1.3}, "work_height_m": 0.6},
+      {"id": "slot_4", "ingredient_id": "disintegrant_pct", "bottle": "bottle_disintegrant", "position": {"angle_deg": 151, "radius_m": 1.3}, "work_height_m": 0.6},
+      {"id": "slot_5", "ingredient_id": "lubricant_pct", "bottle": "bottle_lubricant", "position": {"angle_deg": 158, "radius_m": 1.3}, "work_height_m": 0.6}
+    ]
+  },
+  "tool_holders": [
+    {"id": "punch_holder", "tool": "punch", "station": "press", "position": {"angle_deg": 93.4, "radius_m": 1.033}, "work_height_m": 0.745},
+    {"id": "rod_holder", "tool": "rod", "station": "vessel", "position": {"angle_deg": 21.4, "radius_m": 1.033}, "work_height_m": 0.88}
+  ],
+  "objects": [
+    {"id": "vial", "type": "vial", "starts_at": "rack"},
+    {"id": "tablet", "type": "tablet", "starts_at": null, "created_by": "press"},
+    {"id": "bottle_drug", "type": "bottle", "ingredient_id": "drug_pct", "starts_at": "slot_1"},
+    {"id": "bottle_filler", "type": "bottle", "ingredient_id": "filler_pct", "starts_at": "slot_2"},
+    {"id": "bottle_binder", "type": "bottle", "ingredient_id": "binder_pct", "starts_at": "slot_3"},
+    {"id": "bottle_disintegrant", "type": "bottle", "ingredient_id": "disintegrant_pct", "starts_at": "slot_4"},
+    {"id": "bottle_lubricant", "type": "bottle", "ingredient_id": "lubricant_pct", "starts_at": "slot_5"},
+    {"id": "punch", "type": "tool", "starts_at": "punch_holder"},
+    {"id": "rod", "type": "tool", "starts_at": "rod_holder"}
+  ],
+  "camera_presets": ["overview", "top", "rack", "balance", "press", "gauge", "friabilator", "vessel"]
+}
