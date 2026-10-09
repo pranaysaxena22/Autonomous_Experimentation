@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Robot-only cell prototype: 3D preview</title>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F5F5F5;--card:#FFFFFF;--text:#282728;--muted:#555555;--line:#E6E6E6;--line2:#C9C9C9;
+  --green:#86BC25;--blue:#00A3E0;--red:#DA291C;--soft:#EEF6DB;--fail:#9AA0A6;--stage:#E9EBEE;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--bg:#1A1A1A;--card:#282728;--text:#E6E6E6;--muted:#A8A8A8;--line:#444444;--line2:#5A5A5A;--soft:#2F3A1C;--stage:#1D1F21}
+}
+:root[data-theme="dark"]{--bg:#1A1A1A;--card:#282728;--text:#E6E6E6;--muted:#A8A8A8;--line:#444444;--line2:#5A5A5A;--soft:#2F3A1C;--stage:#1D1F21}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'Open Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;line-height:1.55;font-size:15px}
+.topbar{height:4px;background:var(--green)}
+.wrap{max-width:1240px;margin:0 auto;padding:0 20px}
+header.hdr{padding:24px 20px 10px}
+h1{font-size:1.75rem;line-height:1.2;margin:0 0 6px;font-weight:700}
+.sub{margin:0;color:var(--muted);max-width:760px}
+.banner{margin:14px 0 0;padding:10px 14px;border-left:4px solid var(--green);background:var(--soft);border-radius:0 8px 8px 0;font-size:.88rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px;margin-top:18px}
+.sec-head{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:12px}
+h2{font-size:1.15rem;margin:0;font-weight:700}
+h3{font-size:1rem;margin:0 0 6px}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button,select{font:inherit}
+button{cursor:pointer;border-radius:6px;padding:7px 13px;border:1.5px solid var(--green);background:transparent;color:var(--text);font-weight:600}
+button.primary{background:var(--green);color:#000}
+button:hover{filter:brightness(.95)}
+button:focus-visible,select:focus-visible,.tchip:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+select{padding:7px 9px;border-radius:6px;border:1.5px solid var(--line2);background:var(--card);color:var(--text)}
+label.sm{font-size:.82rem;color:var(--muted)}
+.grid2{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:18px}
+@media (max-width:960px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.stagewrap{position:relative;width:100%;aspect-ratio:16/10;border-radius:10px;overflow:hidden;background:var(--stage);border:1px solid var(--line);touch-action:none}
+.stagewrap canvas{width:100%;height:100%;display:block;cursor:grab}
+.cap{position:absolute;left:10px;right:10px;bottom:10px;background:rgba(40,39,40,.9);color:#fff;padding:8px 12px;border-radius:8px;font-size:.88rem;min-height:38px}
+.hint{position:absolute;left:10px;top:8px;font-size:.75rem;color:var(--muted);background:rgba(255,255,255,.6);padding:2px 8px;border-radius:999px}
+.nogl{position:absolute;inset:0;display:none;align-items:center;justify-content:center;padding:20px;text-align:center;color:var(--muted)}
+.strip{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+.tchip{width:30px;height:30px;border-radius:6px;border:1.5px solid var(--line2);display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;cursor:pointer;background:var(--card);color:var(--text);user-select:none}
+.tchip.pass{background:var(--green);border-color:var(--green);color:#000}
+.tchip.fail{background:var(--fail);border-color:var(--fail);color:#000}
+.tchip.skip{background:var(--red);border-color:var(--red);color:#fff}
+.tchip.cur{outline:3px solid var(--text);outline-offset:1px}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.78rem;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-2px}
+.panel>div{margin-bottom:14px}
+.clock{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:10px 12px;background:var(--soft);border-radius:8px}
+.clock .t{font-size:1.35rem;font-weight:700}
+.clock .w{font-size:.85rem;color:var(--muted)}
+.chips{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.chip{padding:3px 12px;border-radius:999px;border:1.5px solid var(--line2);color:var(--muted);font-weight:600;font-size:.8rem}
+.chip.on{background:var(--green);border-color:var(--green);color:#000}
+.why{background:var(--bg);border-radius:8px;padding:8px 10px;font-size:.85rem;margin:6px 0 8px}
+.bar{display:grid;grid-template-columns:96px 1fr 54px;gap:8px;align-items:center;margin:4px 0;font-size:.82rem}
+.bar .track{height:9px;background:var(--line);border-radius:6px;overflow:hidden}
+.bar .fill{display:block;height:100%;background:var(--green);border-radius:6px}
+.bar .val{text-align:right;font-weight:600}
+.res div{display:flex;justify-content:space-between;gap:8px;padding:7px 10px;border-radius:6px;background:var(--bg);font-size:.85rem;margin-top:5px;border-left:4px solid var(--line2)}
+.res .ok{border-left-color:var(--green)}.res .no{border-left-color:var(--fail)}
+.kp{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.kp div{border-left:4px solid var(--green);background:var(--bg);padding:4px 10px;border-radius:0 8px 8px 0}
+.kp b{display:block;font-size:1.2rem;line-height:1.2}
+.kp span{font-size:.75rem;color:var(--muted)}
+.log{list-style:none;margin:0;padding:0;max-height:190px;overflow:auto;font-size:.8rem}
+.log li{padding:5px 0 5px 9px;border-bottom:1px solid var(--line);border-left:4px solid var(--line2)}
+.log li b{display:block;font-size:.7rem;color:var(--muted);font-weight:600}
+.log li.k-fault{border-left-color:var(--red)}.log li.k-ok{border-left-color:var(--green)}.log li.k-sense{border-left-color:var(--blue)}.log li.k-reason{border-left-color:#E8A317}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:760px){.two{grid-template-columns:1fr}}
+.box{border-top:4px solid var(--green);background:var(--bg);padding:10px 14px;border-radius:0 0 8px 8px}
+.box.no{border-top-color:var(--red)}
+.box ul{margin:6px 0 0;padding-left:18px}.box li{margin:4px 0;font-size:.88rem}
+table{width:100%;border-collapse:collapse;font-size:.85rem}
+th{background:#282728;color:#fff;text-align:left;padding:7px 10px;font-weight:600}
+td{padding:7px 10px;border-bottom:1px solid var(--line)}
+.note{font-size:.8rem;color:var(--muted);margin:8px 0 0}
+</style>
+</head>
+<body>
+<div class="topbar"></div>
+<header class="hdr wrap">
+  <h1>Robot-only cell prototype: 3D preview</h1>
+  <p class="sub">One generic robot arm does every physical step: it picks the ingredient bottles and pours them, shakes to mix, presses with a hand punch, and stirs the dissolution vessel. Nothing else in the cell moves; the balance, gauge and probe only display numbers.</p>
+  <div class="banner"><strong>Prototype, not Gazebo.</strong> This runs in the browser with a generic arm and simplified stand-in tools, to preview what the real build on a VM would show. Values and timings are illustrative.</div>
+</header>
+
+<main class="wrap">
+<section class="card" aria-labelledby="h-cell">
+  <div class="sec-head">
+    <h2 id="h-cell">The robot cell</h2>
+    <div class="controls">
+      <button id="btnPlay" class="primary">Start</button>
+      <button id="btnNext">Next trial</button>
+      <button id="btnRestart">Restart</button>
+      <label class="sm" for="speed">Speed</label>
+      <select id="speed"><option value="1">1×</option><option value="3" selected>3×</option><option value="10">10×</option><option value="40">40×</option><option value="150">150×</option></select>
+      <label class="sm" for="camSel">Camera</label>
+      <select id="camSel"><option value="over">Overview</option><option value="top">Top view</option><option value="rack">Rack and scanner</option><option value="disp">Balance and bottles</option><option value="press">Hand press</option><option value="gauge">Hardness gauge</option><option value="test">Dissolution vessel</option></select>
+    </div>
+  </div>
+  <div class="grid2">
+    <div>
+      <div class="stagewrap" id="stage">
+        <div class="hint">Drag to rotate, scroll to zoom</div>
+        <div class="nogl" id="nogl">The 3D view could not start in this browser (WebGL or the 3D library did not load).</div>
+        <div class="cap" id="cap">Press Start to run the first trial.</div>
+      </div>
+      <div class="strip" id="strip" aria-label="Trials"></div>
+      <div class="legend"><span><i style="background:var(--green)"></i>Passes both targets</span><span><i style="background:var(--fail)"></i>Misses a target</span><span><i style="background:var(--red)"></i>Skipped after failed retry</span><span>Select a number to jump to that trial</span></div>
+    </div>
+    <aside class="panel">
+      <div>
+        <div class="clock"><span class="t" id="clockT">Fri 18:00</span><span class="w" id="clockW">Nobody in the lab</span></div>
+        <div class="chips"><span class="chip" data-p="sense">Sense</span><span class="chip" data-p="reason">Reason</span><span class="chip" data-p="act">Act</span><span class="chip" data-p="adapt">Adapt</span></div>
+      </div>
+      <div>
+        <h3 id="eTitle">Decision engine: trial 1</h3>
+        <div class="why" id="eWhy"></div>
+        <div id="eBars"></div>
+      </div>
+      <div class="res" id="res"></div>
+      <div class="kp"><div><b id="k1">0</b><span>Trials with a result</span></div><div><b id="k2">0</b><span>Passing both targets</span></div><div><b id="k3">0 of 2</b><span>Faults handled</span></div></div>
+      <div><h3>Event log</h3><ul class="log" id="log"></ul></div>
+    </aside>
+  </div>
+</section>
+
+<section class="card" aria-labelledby="h-exp">
+  <h2 id="h-exp" style="margin-bottom:10px">What the robot does, and what it does not need</h2>
+  <div class="two">
+    <div class="box"><strong>Every movement is the robot's</strong><ul>
+      <li>Picks the vial from the rack and holds it up to a barcode scanner, which only reads.</li>
+      <li>Picks each ingredient bottle from its fixed slot, pours it into the vial on the balance, and puts it back.</li>
+      <li>Shakes the vial to mix, pours the blend into the die, and pushes a hand punch down to form the tablet.</li>
+      <li>Places the tablet on the hardness gauge, drops it into the vessel, and stirs with a rod.</li>
+      <li>If a bottle jams, it taps and shakes it, retries, and skips the candidate if the retry fails.</li></ul></div>
+    <div class="box no"><strong>What this prototype does not show</strong><ul>
+      <li>Real robot reach, grip forces, collisions, or measured cycle times. The arm and its motion are generic.</li>
+      <li>How powders flow, mix or compress. The tools and instruments are simplified stand-ins.</li>
+      <li>The client's real equipment. Many labs use dosing heads and presses rather than a robot doing every step.</li>
+      <li>Anything about validation or regulatory readiness.</li></ul></div>
+  </div>
+  <p class="note">The balance, hardness gauge, and probe are passive instruments: they display numbers but never move. The decision logic, hidden virtual lab, faults and timing windows match the dashboard demo. Everything is illustrative.</p>
+  </section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ===== CORE SIMULATION LOGIC (illustrative assumptions) =====
+const ING = [
+  {k:'drug',  name:'Drug (active)',   lo:10,   hi:30, role:'Active ingredient'},
+  {k:'filler',name:'Filler',          lo:40,   hi:70, role:'Bulk of the tablet'},
+  {k:'binder',name:'Binder',          lo:2,    hi:6,  role:'Holds the tablet together'},
+  {k:'disint',name:'Disintegrant',    lo:1,    hi:8,  role:'Breaks the tablet apart in liquid'},
+  {k:'lube',  name:'Lubricant',       lo:0.25, hi:2,  role:'Stops sticking to the press'}
+];
+const TARGET = {dissMin:85, hardLo:6, hardHi:10};
+
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function gauss(r){let u=0,v=0;while(!u)u=r();while(!v)v=r();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+
+// u = [drug, filler, binder, disint, lube] each in 0..1
+function truth(u){
+  const [d,f,b,s,l]=u;
+  // dissolution %: disintegrant helps, binder/lubricant/drug-load slow it; filler has a sweet spot; binder x disint interaction
+  let diss = 70 + 26*Math.pow(s,0.65) - 12*b - 10*l - 8*d*d + 6*Math.exp(-Math.pow((f-0.55)/0.30,2)) + 6*s*(1-b);
+  // hardness kP: binder + filler help, disintegrant & lubricant weaken, drug-load slightly weakens; binder x filler interaction
+  let hard = 5.2 + 4.6*b + 2.0*f - 3.2*s - 1.8*l - 1.0*d + 1.8*b*f;
+  return {diss, hard};
+}
+function measure(u, rnd){
+  const t=truth(u);
+  return {diss:t.diss+gauss(rnd)*1.2, hard:t.hard+gauss(rnd)*0.25};
+}
+// penalty >= 0 ; 0 means passes. margin>0 only when passing
+function evalRes(res){
+  const sd=Math.max(0,TARGET.dissMin-res.diss)/8;
+  const sh=Math.max(0,TARGET.hardLo-res.hard,res.hard-TARGET.hardHi)/1.5;
+  const pen=sd+sh;
+  const pass=pen===0;
+  let margin=0;
+  if(pass){margin=Math.min((res.diss-TARGET.dissMin)/8,(res.hard-TARGET.hardLo)/1.5,(TARGET.hardHi-res.hard)/1.5);}
+  return {pen,pass,score: pass? Math.min(margin,1)*0.5 : -pen};
+}
+function toRecipe(u){return ING.map((g,i)=>g.lo+u[i]*(g.hi-g.lo))}
+
+// ---- fixed pre-set list: a space-filling screening design (Latin hypercube) ----
+function latin(n,dim,rnd){
+  const cols=[];
+  for(let j=0;j<dim;j++){const p=[...Array(n).keys()];for(let i=n-1;i>0;i--){const k=Math.floor(rnd()*(i+1));[p[i],p[k]]=[p[k],p[i]]}cols.push(p.map(v=>(v+rnd())/n))}
+  return [...Array(n).keys()].map(i=>cols.map(c=>c[i]));
+}
+
+// ---- adaptive: small Gaussian-process surrogate + upper-confidence pick ----
+function rbf(a,b,ls){let s=0;for(let i=0;i<a.length;i++){const d=a[i]-b[i];s+=d*d}return Math.exp(-s/(2*ls*ls))}
+function chol(A,n){const L=Array.from({length:n},()=>new Float64Array(n));for(let i=0;i<n;i++){for(let j=0;j<=i;j++){let s=A[i][j];for(let k=0;k<j;k++)s-=L[i][k]*L[j][k];if(i===j){L[i][i]=Math.sqrt(Math.max(s,1e-9))}else L[i][j]=s/L[j][j]}}return L}
+function solveL(L,b,n){const y=new Float64Array(n);for(let i=0;i<n;i++){let s=b[i];for(let k=0;k<i;k++)s-=L[i][k]*y[k];y[i]=s/L[i][i]}return y}
+function solveLT(L,y,n){const x=new Float64Array(n);for(let i=n-1;i>=0;i--){let s=y[i];for(let k=i+1;k<n;k++)s-=L[k][i]*x[k];x[i]=s/L[i][i]}return x}
+function pickNext(X,Y,rnd,opts){
+  opts=opts||{};
+  const n=X.length, ls=0.45, noise=0.05, kappa=opts.kappa||1.6, ncand=opts.ncand||250;
+  const mu=Y.reduce((a,b)=>a+b,0)/n;
+  const K=Array.from({length:n},(_,i)=>Array.from({length:n},(_,j)=>rbf(X[i],X[j],ls)+(i===j?noise:0)));
+  const L=chol(K,n);
+  const yc=Float64Array.from(Y,v=>v-mu);
+  const alpha=solveLT(L,solveL(L,yc,n),n);
+  // candidates: random + local jitter around best points
+  const order=Y.map((v,i)=>i).sort((a,b)=>Y[b]-Y[a]).slice(0,3);
+  const cands=[];
+  for(let c=0;c<ncand;c++){
+    if(c%3===0){const b=X[order[c%order.length]];cands.push(b.map(v=>Math.min(1,Math.max(0,v+gauss(rnd)*0.12))))}
+    else cands.push([rnd(),rnd(),rnd(),rnd(),rnd()]);
+  }
+  let best=null,bs=-1e9,bm=0,bsd=0;
+  for(const x of cands){
+    const k=new Float64Array(n);let m=mu;
+    for(let i=0;i<n;i++){k[i]=rbf(x,X[i],ls);m+=k[i]*alpha[i]}
+    const v=solveL(L,k,n);let q=0;for(let i=0;i<n;i++)q+=v[i]*v[i];
+    const sd=Math.sqrt(Math.max(0,1-q));
+    const a=m+kappa*sd;
+    if(a>bs){bs=a;best=x;bm=m;bsd=sd}
+  }
+  return {u:best,predMean:bm,predSd:bsd};
+}
+
+// One campaign: returns trial index of first pass (or cap+1 if none)
+function campaign(strategy,seed,cap){
+  const rnd=mulberry32(seed);
+  let X=[],Y=[],first=cap+1;
+  const list=strategy==='fixed'?latin(cap,5,rnd):null;
+  const init=latin(6,5,rnd);
+  for(let t=0;t<cap;t++){
+    let u;
+    if(strategy==='fixed')u=list[t];
+    else if(t<6)u=init[t];
+    else u=pickNext(X,Y,rnd,{ncand:200}).u;
+    const e=evalRes(measure(u,rnd));
+    X.push(u);Y.push(e.score);
+    if(e.pass&&first>cap){first=t+1}
+  }
+  return first;
+}
+if(typeof module!=='undefined')module.exports={ING,TARGET,truth,measure,evalRes,toRecipe,latin,pickNext,campaign,mulberry32,gauss};
+
+
+// ================= RUN BUILDER (same logic and timings as the dashboard demo) =================
+const HOURS=120, START_HOUR=18, DAYS=['Fri','Sat','Sun','Mon','Tue','Wed'];
+const TURN=1.0, FAULT_OK=8, FAULT_SKIP=19, TRANSFER=0.06, DOSE_G=5.0;
+const PRESENT=[[62,72],[86,96]];
+function clockStr(t){const tot=START_HOUR+t;const d=Math.min(5,Math.floor(tot/24));const h=tot-d*24;const hh=Math.floor(h);const mm=Math.floor((h-hh)*60);return DAYS[d]+' '+String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0')}
+function isPresent(t){return PRESENT.some(p=>t>=p[0]&&t<p[1])}
+const f1=(v,d)=>v.toFixed(d);
+let trialIdxOf=[];
+function explain(u,X,Y,kind){
+  if(kind==='spread')return 'Starting spread: the first six recipes cover the design space before the engine starts learning.';
+  let b=0;for(let i=1;i<Y.length;i++)if(Y[i]>Y[b])b=i;
+  let md=1e9;for(const x of X){let s=0;for(let i=0;i<5;i++)s+=(x[i]-u[i])**2;md=Math.min(md,Math.sqrt(s))}
+  if(md>0.5)return 'Exploring a region not yet tested, where the engine is least sure of the outcome.';
+  let k=0,mx=0;for(let i=0;i<5;i++){const d=Math.abs(u[i]-X[b][i]);if(d>mx){mx=d;k=i}}
+  const g=ING[k],dv=(u[k]-X[b][k])*(g.hi-g.lo);
+  if(mx<0.06)return 'Fine-tuning around the best recipe so far (trial '+(trialIdxOf[b]+1)+').';
+  return 'Refining near the best recipe so far (trial '+(trialIdxOf[b]+1)+'): '+g.name.toLowerCase()+' '+(dv>0?'up':'down')+' by '+f1(Math.abs(dv),g.k==='lube'?2:1)+' points.';
+}
+function resultText(res,ev){
+  const bits=[];
+  if(res.diss<TARGET.dissMin)bits.push('dissolution '+f1(res.diss,1)+'% is below the 85% target');
+  if(res.hard<TARGET.hardLo)bits.push('tablet too soft ('+f1(res.hard,1)+' kP)');
+  if(res.hard>TARGET.hardHi)bits.push('tablet too hard ('+f1(res.hard,1)+' kP)');
+  return ev.pass?('dissolution '+f1(res.diss,1)+'%, hardness '+f1(res.hard,1)+' kP. Passes both targets.'):(bits.join('; ')+'.');
+}
+function buildRun(seed){
+  const rnd=mulberry32(seed), init=latin(6,5,rnd);
+  const X=[],Y=[],trials=[],events=[];trialIdxOf=[];
+  let s=0,n=0;
+  const ev=(t,kind,text)=>events.push({t,kind,text});
+  while(true){
+    n++;
+    const skip=n===FAULT_SKIP, okf=n===FAULT_OK;
+    const dispDur=okf?1.5:(skip?1.25:0.5);
+    const active=skip?dispDur:dispDur+0.75+0.5+1.25;
+    if(s+active>HOURS)break;
+    let u,kind;
+    if(n<=6){u=init[n-1];kind='spread'}else{u=pickNext(X,Y,rnd,{ncand:250}).u;kind='adaptive'}
+    const why=explain(u,X,Y,kind);
+    const end=s+active;
+    const meas=measure(u,rnd), e=evalRes(meas);
+    const tr={n,s,end,next:end+TURN,u,res:meas,ev:e,why,okf,skip,status:skip?'skipped':(e.pass?'pass':'fail')};
+    if(n>1)ev(s-TURN+0.5,'reason','Next recipe for trial '+n+': '+why);
+    ev(s,'act','Trial '+n+' starts. Barcode check, then the robot starts pouring.');
+    if(okf){ev(s+0.25,'fault','Trial '+n+': binder bottle jammed. Balance reads under-dose. The robot taps and shakes the bottle and retries.');ev(s+1.25,'ok','Retry worked. Trial '+n+' continues. Nobody was called.')}
+    if(skip){ev(s+0.25,'fault','Trial '+n+': binder bottle jammed. Balance reads under-dose. The robot taps and shakes the bottle and retries.');ev(s+1.25,'fault','Retry failed. Candidate skipped, alert queued for the next working day. Cell cleans and moves on.')}
+    else{ev(end,'sense','Trial '+n+' result: '+resultText(meas,e));X.push(u);Y.push(e.score);trialIdxOf.push(trials.length)}
+    trials.push(tr);
+    s=end+TURN;
+  }
+  events.sort((p,q)=>p.t-q.t);
+  return {trials,events};
+}
+
+// ================= 3D SCENE =================
+const $=id=>document.getElementById(id);
+const dark=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches&&document.documentElement.getAttribute('data-theme')!=='light';
+const TABLE=0.5, R=1.0, SAFEY=1.1, H0=0.9, L1=0.72, L2=0.72, L3=0.2;
+const rad=d=>d*Math.PI/180, clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const ING_COL=[0x00A3E0,0xC9C9C9,0x86BC25,0x0D8390,0x5A5A5A];
+const ING_SHORT=['Drug','Filler','Binder','Disint.','Lube'];
+const ST={rack:{a:180,padTop:TABLE+0.02},disp:{a:144,padTop:TABLE+0.06},press:{a:108,padTop:TABLE+0.04},gauge:{a:72,padTop:TABLE+0.05},test:{a:36,padTop:TABLE+0.02},out:{a:0,padTop:TABLE+0.02}};
+const LABELS=[];const _v=typeof THREE!=='undefined'?new THREE.Vector3():null;
+let THREE_OK=typeof THREE!=='undefined',renderer,scene,camera,arm={},fx={},O={},BOT=[];
+const pose={a:90,r:0.55,y:1.3};let fingers=1,H=null,tiltDeg=0;
+const V3=(x,y,z)=>new THREE.Vector3(x,y,z);
+const quatFor=(yaw,tilt)=>new THREE.Quaternion().setFromEuler(new THREE.Euler(0,rad(yaw),rad(tilt),'YXZ'));
+const polarOf=v=>({a:Math.atan2(-v.z,v.x)*180/Math.PI,r:Math.hypot(v.x,v.z)});
+let GRIP={},MOUTH={},REST={};
+
+function mk(geo,mat,parent,x,y,z){const m=new THREE.Mesh(geo,mat);m.position.set(x||0,y||0,z||0);m.castShadow=true;m.receiveShadow=true;if(parent)parent.add(m);return m}
+const mat=(c,o)=>new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:.55,metalness:.15},o||{}));
+function labelSprite(text,w){const c=document.createElement('canvas');c.width=256;c.height=64;const x=c.getContext('2d');x.fillStyle='rgba(255,255,255,.92)';x.beginPath();x.roundRect?x.roundRect(4,8,248,48,12):x.rect(4,8,248,48);x.fill();x.strokeStyle='#86BC25';x.lineWidth=4;x.stroke();x.fillStyle='#282728';x.font='700 26px "Open Sans",Arial,sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText(text,128,33);const t=new THREE.CanvasTexture(c);const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,transparent:true}));s.scale.set(w,w/4,1);s.userData.w=w;LABELS.push(s);return s}
+function makeScreen(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;return {c,x:c.getContext('2d'),t:new THREE.CanvasTexture(c)}}
+function drawScreen(s,lines,border){const x=s.x,w=s.c.width,h=s.c.height;x.fillStyle='#101214';x.fillRect(0,0,w,h);x.strokeStyle=border||'#86BC25';x.lineWidth=8;x.strokeRect(4,4,w-8,h-8);x.textAlign='center';x.textBaseline='middle';let y=h/(lines.length+1);for(const l of lines){x.fillStyle=l.c||'#E6E6E6';x.font=(l.b?'700 ':'400 ')+(l.s||28)+'px "Open Sans",Arial,sans-serif';x.fillText(l.t,w/2,y);y+=h/(lines.length+1)}s.t.needsUpdate=true}
+function screenMesh(s,w,h,parent,x,y,z){const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:s.t}));m.position.set(x,y,z);m.rotation.y=-Math.PI/2;parent.add(m);return m}
+function stationGroup(k){const a=ST[k].a;const g=new THREE.Group();g.position.set(R*Math.cos(rad(a)),TABLE,-R*Math.sin(rad(a)));g.rotation.y=rad(a);scene.add(g);ST[k].g=g;ST[k].pos=new THREE.Vector3(R*Math.cos(rad(a)),ST[k].padTop,-R*Math.sin(rad(a)));
+  const ring=new THREE.Mesh(new THREE.RingGeometry(0.19,0.225,48),new THREE.MeshBasicMaterial({color:0x86BC25,transparent:true,opacity:0,side:THREE.DoubleSide}));ring.rotation.x=-Math.PI/2;ring.position.y=0.006;g.add(ring);ST[k].ring=ring;return g}
+const steel=()=>mat(0xc9ccd0,{metalness:.5,roughness:.3});
+
+function buildScene(){
+  const wrap=$('stage');
+  try{renderer=new THREE.WebGLRenderer({antialias:true});}catch(e){THREE_OK=false;return}
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  wrap.insertBefore(renderer.domElement,wrap.firstChild);
+  scene=new THREE.Scene();scene.background=new THREE.Color(dark?0x1d1f21:0xe9ebee);scene.fog=new THREE.Fog(dark?0x1d1f21:0xe9ebee,7,16);
+  camera=new THREE.PerspectiveCamera(42,1.6,0.1,60);
+  scene.add(new THREE.HemisphereLight(0xffffff,dark?0x30343a:0x9aa0a6,dark?0.55:0.8));
+  const dl=new THREE.DirectionalLight(0xffffff,dark?0.7:0.85);dl.position.set(3,5.5,3);dl.castShadow=true;dl.shadow.mapSize.set(2048,2048);const sc=dl.shadow.camera;sc.left=-3;sc.right=3;sc.top=3;sc.bottom=-3;sc.near=1;sc.far=14;scene.add(dl);
+  const fl=mk(new THREE.PlaneGeometry(80,80),mat(dark?0x26292c:0xeef0f2,{roughness:.9,metalness:0}),scene,0,0,0);fl.rotation.x=-Math.PI/2;fl.castShadow=false;
+  mk(new THREE.CylinderGeometry(1.55,1.6,0.44,56),mat(0x2b2d30),scene,0,0.22,0);
+  mk(new THREE.CylinderGeometry(1.82,1.82,0.06,64),mat(0xf2f3f4,{roughness:.35}),scene,0,0.47,0);
+  const edge=new THREE.Mesh(new THREE.RingGeometry(1.74,1.79,96),new THREE.MeshBasicMaterial({color:0x86BC25,side:THREE.DoubleSide}));edge.rotation.x=-Math.PI/2;edge.position.y=TABLE+0.002;scene.add(edge);
+  // ---------- arm ----------
+  const white=mat(0xf3f4f5,{roughness:.35}), darkm=mat(0x2b2d30), grn=mat(0x86BC25,{roughness:.4});
+  const root=new THREE.Group();root.position.set(0,TABLE,0);scene.add(root);
+  mk(new THREE.CylinderGeometry(0.24,0.28,0.1,40),darkm,root,0,0.05,0);
+  mk(new THREE.CylinderGeometry(0.19,0.22,0.3,40),white,root,0,0.25,0);
+  mk(new THREE.CylinderGeometry(0.2,0.2,0.03,40),grn,root,0,0.32,0);
+  arm.yaw=new THREE.Group();arm.yaw.position.y=H0-TABLE;root.add(arm.yaw);
+  const sj=mk(new THREE.CylinderGeometry(0.1,0.1,0.18,32),darkm,arm.yaw,0,0,0);sj.rotation.x=Math.PI/2;
+  arm.up=new THREE.Group();arm.yaw.add(arm.up);
+  const ul=mk(new THREE.CylinderGeometry(0.058,0.062,L1,24),white,arm.up,L1/2,0,0);ul.rotation.z=Math.PI/2;
+  const band1=mk(new THREE.CylinderGeometry(0.066,0.066,0.04,24),grn,arm.up,0.14,0,0);band1.rotation.z=Math.PI/2;
+  arm.el=new THREE.Group();arm.el.position.x=L1;arm.up.add(arm.el);
+  mk(new THREE.SphereGeometry(0.08,24,16),darkm,arm.el,0,0,0);
+  const fl2=mk(new THREE.CylinderGeometry(0.044,0.052,L2,24),white,arm.el,L2/2,0,0);fl2.rotation.z=Math.PI/2;
+  const band2=mk(new THREE.CylinderGeometry(0.058,0.058,0.04,24),grn,arm.el,0.16,0,0);band2.rotation.z=Math.PI/2;
+  arm.wr=new THREE.Group();arm.wr.position.x=L2;arm.el.add(arm.wr);
+  mk(new THREE.SphereGeometry(0.058,20,14),darkm,arm.wr,0,0,0);
+  mk(new THREE.BoxGeometry(0.08,0.1,0.14),darkm,arm.wr,0.06,0,0);
+  arm.f1=mk(new THREE.BoxGeometry(0.15,0.022,0.018),white,arm.wr,0.12,0,0.06);
+  arm.f2=mk(new THREE.BoxGeometry(0.15,0.022,0.018),white,arm.wr,0.12,0,-0.06);
+  // ---------- stations (passive: nothing here moves by itself) ----------
+  buildRack(stationGroup('rack'));buildDisp(stationGroup('disp'));buildPress(stationGroup('press'));buildGauge(stationGroup('gauge'));buildTest(stationGroup('test'));buildOut(stationGroup('out'));
+  scene.updateMatrixWorld(true);
+  buildObjects();
+  fx.flow=[];for(let j=0;j<12;j++){const m=new THREE.Mesh(new THREE.SphereGeometry(0.0115,8,6),new THREE.MeshBasicMaterial({color:0xffffff}));m.visible=false;scene.add(m);fx.flow.push(m)}
+  fx.flowState={on:false,from:null,to:V3(0,0,0),color:0xffffff};
+  fx.laser=new THREE.Mesh(new THREE.BoxGeometry(0.006,0.006,1),new THREE.MeshBasicMaterial({color:0xff2a1a}));fx.laser.visible=false;scene.add(fx.laser);
+  initCamera();resize();
+  new ResizeObserver(resize).observe(wrap);
+}
+function resize(){if(!renderer)return;const w=$('stage').clientWidth,h=$('stage').clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
+
+function buildRack(g){
+  mk(new THREE.CylinderGeometry(0.15,0.15,0.02,32),mat(0x3a3d40),g,0,0.01,0);
+  mk(new THREE.BoxGeometry(0.22,0.05,0.62),mat(0xc9ccd0),g,0.34,0.025,0);
+  for(let j=0;j<5;j++){const v=mk(new THREE.CylinderGeometry(0.04,0.04,0.2,20),mat(0xdfeaf0,{transparent:true,opacity:.4}),g,0.34,0.15,-0.24+j*0.12);v.castShadow=false;mk(new THREE.CylinderGeometry(0.043,0.043,0.03,20),mat(0x2b2d30),g,0.34,0.265,-0.24+j*0.12)}
+  const sc=mk(new THREE.BoxGeometry(0.1,0.14,0.1),mat(0x15171a),g,-0.02,0.07,0.27);mk(new THREE.BoxGeometry(0.02,0.02,0.02),mat(0xff2a1a,{emissive:0xff2a1a}),sc,0,0.03,-0.055);
+  ST.rack.scanner=g.localToWorld(V3(-0.02,0.1,0.22));
+  const lb=labelSprite('RACK + SCANNER',0.62);lb.position.set(0.1,0.62,0);g.add(lb);
+}
+function buildDisp(g){
+  mk(new THREE.CylinderGeometry(0.17,0.17,0.06,40),mat(0xc9ccd0,{roughness:.3}),g,0,0.03,0);
+  mk(new THREE.CylinderGeometry(0.12,0.12,0.006,40),mat(0x2b2d30),g,0,0.062,0);
+  mk(new THREE.BoxGeometry(0.05,0.13,0.26),mat(0x15171a),g,-0.2,0.07,0);
+  const s=makeScreen(256,128);drawScreen(s,[{t:'BALANCE',s:22},{t:'0.00 g',s:46,b:1},{t:'target 5.00 g',s:20}]);screenMesh(s,0.24,0.12,g,-0.226,0.075,0);ST.disp.screen=s;
+  const lb=labelSprite('BALANCE',0.45);lb.position.set(-0.05,0.5,0);g.add(lb);
+}
+function buildPress(g){
+  mk(new THREE.BoxGeometry(0.26,0.03,0.26),mat(0x3a3d40),g,0,0.015,0);
+  mk(new THREE.CylinderGeometry(0.085,0.085,0.04,32),steel(),g,0,0.02,0);
+  mk(new THREE.CylinderGeometry(0.045,0.045,0.004,24),mat(0x15171a),g,0,0.041,0);
+  ST.press.mound=mk(new THREE.CylinderGeometry(0.042,0.042,0.03,24),mat(0xe9e2cf,{roughness:.9}),g,0,0.055,0);ST.press.mound.visible=false;
+  mk(new THREE.CylinderGeometry(0.06,0.07,0.03,24),mat(0x3a3d40),g,0,0.015,0.26);
+  const lb=labelSprite('HAND PRESS',0.5);lb.position.set(0.1,0.55,0);g.add(lb);
+}
+function buildGauge(g){
+  mk(new THREE.CylinderGeometry(0.1,0.1,0.05,32),steel(),g,0,0.025,0);
+  mk(new THREE.BoxGeometry(0.05,0.13,0.26),mat(0x15171a),g,-0.2,0.07,0);
+  const s=makeScreen(256,128);drawScreen(s,[{t:'HARDNESS GAUGE',s:22},{t:'ready',s:40,b:1}]);screenMesh(s,0.24,0.12,g,-0.226,0.075,0);ST.gauge.screen=s;
+  const lb=labelSprite('HARDNESS',0.5);lb.position.set(0.1,0.5,0);g.add(lb);
+}
+function buildTest(g){
+  mk(new THREE.CylinderGeometry(0.15,0.15,0.02,32),mat(0x3a3d40),g,0,0.01,0);
+  const ves=mk(new THREE.CylinderGeometry(0.115,0.1,0.3,32,1,true),mat(0xcfe7f2,{transparent:true,opacity:.25,roughness:.05,side:THREE.DoubleSide}),g,0,0.17,0);ves.castShadow=false;
+  mk(new THREE.CylinderGeometry(0.1,0.1,0.01,32),mat(0xcfe7f2,{transparent:true,opacity:.5}),g,0,0.025,0).castShadow=false;
+  ST.test.liq=mk(new THREE.CylinderGeometry(0.112,0.1,0.22,32),new THREE.MeshStandardMaterial({color:0x9fd6f0,transparent:true,opacity:.35,roughness:.1}),g,0,0.14,0);ST.test.liq.castShadow=false;
+  mk(new THREE.CylinderGeometry(0.006,0.006,0.3,12),mat(0x15171a),g,0.07,0.17,0.07);
+  mk(new THREE.BoxGeometry(0.05,0.2,0.34),mat(0x15171a),g,-0.27,0.1,0.0);
+  const s=makeScreen(256,200);drawScreen(s,[{t:'DISSOLUTION PROBE',s:20},{t:'ready',s:36,b:1}]);screenMesh(s,0.3,0.19,g,-0.298,0.105,0);ST.test.screen=s;
+  mk(new THREE.CylinderGeometry(0.06,0.07,0.03,24),mat(0x3a3d40),g,0,0.015,0.26);
+  const lb=labelSprite('DISSOLUTION',0.58);lb.position.set(0.1,0.62,0);g.add(lb);
+}
+function buildOut(g){
+  const m=mat(0x3a3d40);mk(new THREE.BoxGeometry(0.3,0.02,0.3),m,g,0,0.01,0);
+  mk(new THREE.BoxGeometry(0.3,0.2,0.02),m,g,0,0.11,0.14);mk(new THREE.BoxGeometry(0.3,0.2,0.02),m,g,0,0.11,-0.14);mk(new THREE.BoxGeometry(0.02,0.2,0.3),m,g,0.14,0.11,0);mk(new THREE.BoxGeometry(0.02,0.2,0.3),m,g,-0.14,0.11,0);
+  const lb=labelSprite('DISCARD',0.5);lb.position.set(0.05,0.62,0);g.add(lb);
+}
+function buildObjects(){
+  const darkm=mat(0x2b2d30);
+  // vial
+  const v=new THREE.Group();scene.add(v);O.vial=v;
+  O.vialGlass=mk(new THREE.CylinderGeometry(0.04,0.04,0.2,24,1,true),mat(0xcfe3ee,{transparent:true,opacity:.55,roughness:.1,side:THREE.DoubleSide}),v,0,0.1,0);O.vialGlass.castShadow=false;
+  mk(new THREE.CylinderGeometry(0.04,0.04,0.006,24),mat(0xdfeaf0,{transparent:true,opacity:.6}),v,0,0.003,0);
+  mk(new THREE.CylinderGeometry(0.043,0.043,0.03,24),darkm,v,0,0.215,0);
+  O.powder=mk(new THREE.CylinderGeometry(0.036,0.036,1,24),mat(0xffffff,{roughness:.9}),v,0,0.003,0);
+  GRIP.vial=V3(0,0.17,0);MOUTH.vial=V3(0,0.2,0);
+  // tablet
+  const t=new THREE.Group();scene.add(t);O.tablet=t;mk(new THREE.CylinderGeometry(0.05,0.05,0.03,32),mat(0xfaf7ee,{roughness:.6}),t,0,0.015,0);GRIP.tablet=V3(0,0.03,0);
+  // punch
+  const p=new THREE.Group();scene.add(p);O.punch=p;mk(new THREE.CylinderGeometry(0.036,0.036,0.16,24),steel(),p,0,0.08,0);mk(new THREE.CylinderGeometry(0.05,0.05,0.03,24),mat(0x005587),p,0,0.175,0);GRIP.punch=V3(0,0.175,0);
+  // stirring rod
+  const r=new THREE.Group();scene.add(r);O.rod=r;mk(new THREE.CylinderGeometry(0.009,0.009,0.32,12),steel(),r,0,0.16,0);mk(new THREE.CylinderGeometry(0.022,0.022,0.04,16),mat(0x0D8390),r,0,0.34,0);GRIP.rod=V3(0,0.33,0);
+  // ingredient bottles (fixed slots on a curved shelf)
+  O.bot=[];O.botMat=[];
+  for(let k=0;k<5;k++){
+    const a=144+(k-2)*7;const bg=new THREE.Group();scene.add(bg);const bm=mat(ING_COL[k],{roughness:.4});O.botMat.push(bm);
+    mk(new THREE.CylinderGeometry(0.045,0.045,0.15,24),bm,bg,0,0,0);mk(new THREE.CylinderGeometry(0.022,0.03,0.04,16),bm,bg,0,0.095,0);mk(new THREE.CylinderGeometry(0.027,0.027,0.03,16),mat(0xf3f4f5),bg,0,0.13,0);
+    O.bot.push(bg);GRIP['b'+k]=V3(0,0,0);MOUTH['b'+k]=V3(0,0.145,0);
+    const slot=mk(new THREE.CylinderGeometry(0.06,0.06,0.02,24),mat(0x3a3d40),scene,1.3*Math.cos(rad(a)),TABLE+0.01,-1.3*Math.sin(rad(a)));
+    const lb=labelSprite(ING_SHORT[k],0.3);lb.position.set(1.3*Math.cos(rad(a)),0.88,-1.3*Math.sin(rad(a)));scene.add(lb);
+    REST['b'+k]={pos:V3(1.3*Math.cos(rad(a)),0.6,-1.3*Math.sin(rad(a))),yaw:a};
+  }
+  REST.punch={pos:ST.press.g.localToWorld(V3(0,0.03,0.26)),yaw:ST.press.a};
+  REST.rod={pos:ST.test.g.localToWorld(V3(0,0.03,0.26)),yaw:ST.test.a};
+}
+function setRest(key){const r=REST[key];const o=objOf(key);o.position.copy(r.pos);o.quaternion.copy(quatFor(r.yaw,0))}
+function objOf(key){return key==='vial'?O.vial:key==='tablet'?O.tablet:key==='punch'?O.punch:key==='rod'?O.rod:O.bot[+key.slice(1)]}
+
+// ---------- kinematics ----------
+function applyPose(){
+  const r=pose.r,y=pose.y+L3,dx=r,dy=y-H0;let d=Math.hypot(dx,dy);d=Math.min(d,L1+L2-0.002);
+  const c=clamp((d*d-L1*L1-L2*L2)/(2*L1*L2),-1,1);const q2=-Math.acos(c);const phi=Math.atan2(dy,dx);
+  const th1=phi-Math.atan2(L2*Math.sin(q2),L1+L2*Math.cos(q2));const th2=th1+q2;
+  arm.yaw.rotation.y=rad(pose.a);arm.up.rotation.z=th1;arm.el.rotation.z=q2;arm.wr.rotation.z=-Math.PI/2-th2;
+  const gap=0.048+0.05*fingers;arm.f1.position.z=gap;arm.f2.position.z=-gap;
+}
+function eePos(){return V3(pose.r*Math.cos(rad(pose.a)),pose.y,-pose.r*Math.sin(rad(pose.a)))}
+function setPoseFromWorld(v){const p=polarOf(v);pose.a=p.a;pose.r=p.r;pose.y=v.y}
+function placeHeld(){
+  if(!H)return;const q=quatFor(pose.a,tiltDeg);H.obj.quaternion.copy(q);
+  H.obj.position.copy(eePos()).sub(H.grip.clone().applyQuaternion(q));
+}
+
+// ---------- camera ----------
+const cam={t:{x:0,y:.7,z:-.3,r:3.5,th:.3,ph:.9},c:{x:0,y:.7,z:-.3,r:3.5,th:.3,ph:.9}};
+function stationCam(k,rr){const a=rad(ST[k].a);const p=ST[k].pos;return {x:p.x*1.04,y:p.y+0.15,z:p.z*1.04,r:rr||1.9,th:Math.atan2(-Math.cos(a),Math.sin(a))+1.15,ph:0.82}}
+const PRESETS={over:()=>({x:0,y:.7,z:-.3,r:3.5,th:.3,ph:.9}),top:()=>({x:0,y:.5,z:-.2,r:4.2,th:0,ph:.2}),rack:()=>stationCam('rack',2.3),disp:()=>stationCam('disp',2.4),press:()=>stationCam('press',2.1),gauge:()=>stationCam('gauge',2.1),test:()=>stationCam('test',2.1)};
+function initCamera(){
+  const el=renderer.domElement;let drag=null;
+  el.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY};el.setPointerCapture(e.pointerId);el.style.cursor='grabbing'});
+  el.addEventListener('pointermove',e=>{if(!drag)return;cam.t.th-=(e.clientX-drag.x)*0.006;cam.t.ph=clamp(cam.t.ph-(e.clientY-drag.y)*0.005,0.12,1.5);drag={x:e.clientX,y:e.clientY}});
+  const up=()=>{drag=null;el.style.cursor='grab'};el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up);
+  el.addEventListener('wheel',e=>{e.preventDefault();cam.t.r=clamp(cam.t.r*(1+e.deltaY*0.001),1.4,8)},{passive:false});
+}
+function updateCamera(dt){
+  const f=1-Math.exp(-(dt||0.016)*5);for(const k of ['x','y','z','r','th','ph'])cam.c[k]+=(cam.t[k]-cam.c[k])*f;
+  const c=cam.c;camera.position.set(c.x+c.r*Math.sin(c.ph)*Math.sin(c.th),c.y+c.r*Math.cos(c.ph),c.z+c.r*Math.sin(c.ph)*Math.cos(c.th));camera.lookAt(c.x,c.y,c.z);
+}
+
+// ================= PLAYER =================
+let revealedCur=false,run=null,ti=0,tasks=[],ki=0,taskP=0,started=false,simNow=0,playing=false,speed=3,done=false,trialDone=0,passCount=0,faultCount=0,lastLogN=-1,curPhase='';
+const task=o=>Object.assign({dur:.3,sim:0,cap:'',phase:'act',start(){},upd(p){},end(){}},o);
+const ease=p=>p<.5?2*p*p:1-Math.pow(-2*p+2,2)/2;
+// move the tip to (a,r,y); null keeps the current value. Duration follows distance.
+function mvA(a,r,y,cap,sim){let f,T;return task({sim:sim||0,cap,
+  start(){f={a:pose.a,r:pose.r,y:pose.y};T={a:a===null?f.a:a,r:r===null?f.r:r,y:y===null?f.y:y};const ar=(f.r+T.r)/2;const d=Math.hypot(Math.abs(T.a-f.a)*Math.PI/180*ar,T.r-f.r,T.y-f.y);this.dur=Math.max(.08,d/1.8)},
+  upd(p){const e=ease(p);pose.a=f.a+(T.a-f.a)*e;pose.r=f.r+(T.r-f.r)*e;pose.y=f.y+(T.y-f.y)*e}})}
+const grab=(key,cap)=>task({dur:.22,cap,upd(p){fingers=1-p},end(){fingers=0;H={obj:objOf(key),grip:GRIP[key],key}}});
+function release(key,rest,cap,free){return task({dur:.22,cap,upd(p){fingers=p},end(){fingers=1;if(!free&&rest){const o=objOf(key);o.position.copy(rest.pos);o.quaternion.copy(quatFor(rest.yaw,0))}H=null;tiltDeg=0}})}
+function eeAtRest(key,rest){return rest.pos.clone().add(GRIP[key].clone().applyQuaternion(quatFor(rest.yaw,0)))}
+function pickTasks(key,rest,cap){const ee=eeAtRest(key,rest),p=polarOf(ee);return [mvA(null,null,SAFEY,'Lifting'),mvA(p.a,p.r,SAFEY,cap),mvA(p.a,p.r,ee.y,'Lowering to the '+(key==='vial'?'vial':key==='tablet'?'tablet':key[0]==='b'?'bottle':'tool')),grab(key,'Gripper closes'),mvA(p.a,p.r,SAFEY,'Lifting')]}
+function placeTasks(key,rest,cap,sim){const ee=eeAtRest(key,rest),p=polarOf(ee);return [mvA(p.a,p.r,SAFEY,cap),mvA(p.a,p.r,ee.y+0.004,'Lowering'),release(key,rest,'Gripper opens'),mvA(p.a,p.r,SAFEY,'Lifting clear',sim)]}
+// hold the mouth of a tilted object at a world target
+function holdMouth(key,tgt,yaw,tilt){const q=quatFor(yaw,tilt);const off=MOUTH[key].clone().sub(GRIP[key]).applyQuaternion(q);setPoseFromWorld(tgt.clone().sub(off))}
+function mouthWorld(){if(!H)return V3(0,0,0);return H.obj.localToWorld(MOUTH[H.key].clone())}
+function cumulative(u){const r=toRecipe(u);const s=r.reduce((a,b)=>a+b,0);const c=[0];r.forEach((v,i)=>c.push(c[i]+v/s));return c}
+function powderColor(u,q){const c=cumulative(u);let R_=0,G=0,B=0,w=0;for(let k=0;k<5;k++){const a=c[k],b=Math.min(c[k+1],q);if(b<=a)continue;const col=new THREE.Color(ING_COL[k]);const ww=b-a;R_+=col.r*ww;G+=col.g*ww;B+=col.b*ww;w+=ww}return w>0?new THREE.Color(R_/w,G/w,B/w):new THREE.Color(1,1,1)}
+function setDose(tr,q){
+  O.powder.scale.y=Math.max(0.001,0.13*q);O.powder.position.y=0.006+0.065*q;O.powder.material.color.copy(powderColor(tr.u,q).lerp(new THREE.Color(0xffffff),.3));
+  drawScreen(ST.disp.screen,[{t:'BALANCE',s:22},{t:f1(DOSE_G*q,2)+' g',s:46,b:1},{t:'target 5.00 g',s:20}]);
+}
+function flow(on,color,to){fx.flowState.on=on;if(color!==undefined)fx.flowState.color=color;if(to)fx.flowState.to=to}
+function updateFlow(){
+  const fs=fx.flowState;const now=performance.now()/1000;
+  for(let j=0;j<fx.flow.length;j++){const m=fx.flow[j];if(!fs.on||!H){m.visible=false;continue}
+    const from=mouthWorld(),to=fs.to;const ph=((now*2.0)+j/fx.flow.length)%1;m.material.color.setHex(fs.color);
+    m.position.set(from.x+(to.x-from.x)*ph,from.y+(to.y-from.y)*ph*ph,from.z+(to.z-from.z)*ph);m.visible=true}
+}
+const restVial=st=>({pos:ST[st].pos.clone(),yaw:ST[st].a});
+const restTab=st=>({pos:ST[st].pos.clone(),yaw:ST[st].a});
+function resetObjects(){
+  O.vial.position.copy(ST.rack.pos);O.vial.quaternion.copy(quatFor(ST.rack.a,0));O.vial.visible=true;
+  O.powder.scale.y=0.001;O.powder.position.y=0.006;O.powder.material.color.set(0xffffff);
+  O.tablet.visible=false;O.tablet.scale.set(1,1,1);O.tablet.position.copy(ST.press.pos);
+  for(let k=0;k<5;k++){setRest('b'+k);O.botMat[k].emissive.setHex(0)}
+  setRest('punch');setRest('rod');ST.press.mound.visible=false;ST.press.mound.scale.set(1,.01,1);
+  ST.test.liq.material.color.setHex(0x9fd6f0);for(const k of Object.keys(ST))ringSet(k,0x86BC25,0);
+  drawScreen(ST.disp.screen,[{t:'BALANCE',s:22},{t:'0.00 g',s:46,b:1},{t:'target 5.00 g',s:20}]);
+  drawScreen(ST.gauge.screen,[{t:'HARDNESS GAUGE',s:22},{t:'ready',s:40,b:1}]);
+  drawScreen(ST.test.screen,[{t:'DISSOLUTION PROBE',s:20},{t:'ready',s:36,b:1}]);
+  H=null;tiltDeg=0;flow(false);fx.laser.visible=false;
+}
+function ringSet(k,color,op){const r=ST[k].ring;r.material.color.setHex(color);r.material.opacity=op}
+
+function makeTasks(i){
+  const tr=run.trials[i],T=[],c=cumulative(tr.u);
+  const add=(...ts)=>{ts.flat().forEach(t=>T.push(t))};
+  const balPos=ST.disp.pos.clone(), vialTopBal=balPos.clone().add(V3(0,0.2,0));
+  const yawD=ST.disp.a, jam=tr.okf||tr.skip;
+  const pourTarget=vialTopBal.clone().add(V3(0,0.06,0));
+  if(i===0)add(task({dur:1.4,phase:'reason',cap:'Decision engine chooses the first recipe from the starting spread.',upd(p){curPhase=p<.5?'reason':'adapt'}}));
+  // ---- 1. pick vial, barcode scan, place on balance ----
+  add(pickTasks('vial',restVial('rack'),'Robot picks the vial from the rack'));
+  const holdPt=ST.rack.g.localToWorld(V3(-0.02,0.5,0.13)),hp=polarOf(holdPt);
+  add(mvA(hp.a,hp.r,holdPt.y,'Robot holds the vial up to the barcode scanner'));
+  add(task({dur:.9,sim:.03,cap:'Barcode scan: vial V-'+String(tr.n).padStart(3,'0')+' matches recipe '+tr.n+'. The scanner only reads; positions are fixed, so no camera is needed.',
+    start(){fx.laser.visible=true},upd(p){const vp=O.vial.position.clone().add(V3(0,0.1+0.07*Math.sin(p*Math.PI*4),0));const a=ST.rack.scanner,mid=a.clone().add(vp).multiplyScalar(.5);fx.laser.position.copy(mid);fx.laser.lookAt(vp);fx.laser.scale.z=a.distanceTo(vp)},end(){fx.laser.visible=false}}));
+  add(placeTasks('vial',restVial('disp'),'Robot places the vial on the balance'));
+  // ---- 2. dispense: robot picks each bottle and pours ----
+  const BS=.094;
+  const approach=(bk,cap)=>task({dur:.55,cap,start(){this.f={a:pose.a,r:pose.r,y:pose.y}},upd(p){const e=ease(p);tiltDeg=70*e;const lift=0.26-0.2*e;holdMouth(bk,pourTarget.clone().add(V3(0,lift-.06+.06,0)),yawD,tiltDeg);}});
+  const pour=(bk,q0,q1,cap,sim,color)=>task({dur:Math.max(.45,2.2*(q1-q0)+.3),sim,cap,
+    start(){flow(true,color,vialTopBal.clone().add(V3(0,-0.1,0)))},
+    upd(p){tiltDeg=70+42*p;holdMouth(bk,pourTarget,yawD,tiltDeg);setDose(tr,q0+(q1-q0)*p)},
+    end(){setDose(tr,q1);flow(false)}});
+  const retreat=(bk)=>task({dur:.4,cap:'Robot tilts the bottle back upright',start(){this.t0=tiltDeg},upd(p){const e=ease(p);tiltDeg=this.t0*(1-e);holdMouth(bk,pourTarget.clone().add(V3(0,0.06+0.2*e,0)),yawD,tiltDeg)}});
+  for(let k=0;k<5;k++){
+    const bk='b'+k,nm=ING[k].name.split(' ')[0],q0=c[k],q1=c[k+1],col=ING_COL[k];
+    add(pickTasks(bk,REST[bk],'Robot picks the '+nm+' bottle from fixed slot '+(k+1)));
+    add(mvA(null,null,SAFEY,'Carrying it over the vial'));
+    add(task({dur:.3,cap:'Carrying it over the vial',start(){const e=pourTarget.clone().add(V3(0,.26,0));const q=quatFor(yawD,0);const off=MOUTH[bk].clone().sub(GRIP[bk]).applyQuaternion(q);this.p=polarOf(e.clone().sub(off));this.y=e.y-off.y;this.f={...pose}},upd(p){const e=ease(p);pose.a=this.f.a+(this.p.a-this.f.a)*e;pose.r=this.f.r+(this.p.r-this.f.r)*e;pose.y=this.f.y+(this.y-this.f.y)*e}}));
+    add(approach(bk,'Robot tilts the '+nm+' bottle over the vial'));
+    if(k===2&&jam){
+      const qc=q0+0.4*(q1-q0);
+      add(pour(bk,q0,qc,'Pouring the '+nm+' powder, weighed on the balance',BS*.4,col));
+      add(task({dur:.9,cap:'Fault: the binder bottle is jammed and powder stops flowing. Balance reads '+f1(DOSE_G*qc,2)+' g, expected '+f1(DOSE_G*q1,2)+' g by now.',
+        start(){ringSet('disp',0xDA291C,.95);O.botMat[k].emissive.setHex(0xDA291C);drawScreen(ST.disp.screen,[{t:'UNDER-DOSE',s:30,b:1,c:'#ff8a80'},{t:f1(DOSE_G*qc,2)+' g',s:40,b:1},{t:'ALERT',s:22,c:'#ff8a80'}],'#DA291C')},upd(p){holdMouth(bk,pourTarget,yawD,tiltDeg)}}));
+      add(task({dur:2.2,sim:1.0,cap:'Robot taps and shakes the jammed bottle to clear it, then retries. Nobody is called.',
+        start(){this.t0=tiltDeg;this.base={...pose}},upd(p){const w=Math.sin(p*Math.PI*2*7);tiltDeg=this.t0+10*w;holdMouth(bk,pourTarget,yawD,tiltDeg);pose.y+=0.02*Math.sin(p*Math.PI*2*14);O.botMat[k].emissive.setHex((Math.floor(p*12)%2)?0xDA291C:0x551111)},
+        end(){O.botMat[k].emissive.setHex(tr.okf?0:0xDA291C);ringSet('disp',tr.okf?0x86BC25:0xDA291C,.9);if(tr.okf)faultCount++}}));
+      if(tr.okf){
+        add(pour(bk,qc,q1,'Retry worked. Pouring the rest of the '+nm+' powder',BS*.6,col));
+      }else{
+        add(task({dur:1.0,cap:'Retry failed. This candidate is skipped and an alert is queued for the next working day.',start(){faultCount++;revealedCur=true;buildStrip();drawScreen(ST.disp.screen,[{t:'RETRY FAILED',s:26,b:1,c:'#ff8a80'},{t:'candidate skipped',s:22},{t:'alert queued',s:22}],'#DA291C')}}));
+        add(retreat(bk));
+        add(placeTasks(bk,REST[bk],'Robot returns the jammed bottle to its slot'));
+        add(pickTasks('vial',restVial('disp'),'Robot picks up the vial to discard it'));
+        add(mvA(0,1.0,0.95,'Robot carries the vial to the discard bin'));
+        add(release('vial',null,'Gripper opens',true));
+        add(task({dur:.5,cap:'Vial dropped into the discard bin',upd(p){O.vial.position.y=.78-(.78-.58)*p*p},end(){O.vial.visible=false}}));
+        add(task({dur:1.7,sim:TURN-.02,phase:'reason',cap:'Cleaning, then the engine re-plans: this recipe produced no result',
+          start(){curPhase='reason';ringSet('disp',0x86BC25,0);drawScreen(ST.disp.screen,[{t:'BALANCE',s:22},{t:'0.00 g',s:46,b:1},{t:'target 5.00 g',s:20}])},
+          upd(p){curPhase=p<.5?'reason':'adapt';if(p>.5&&!this.shown){this.shown=true;showTrial(i+1)}}}));
+        return T;
+      }
+    }else{
+      add(pour(bk,q0,q1,'Pouring the '+nm+' powder, weighed on the balance',BS,col));
+    }
+    add(retreat(bk));
+    add(placeTasks(bk,REST[bk],'Robot returns the '+nm+' bottle to its slot'));
+  }
+  add(task({dur:.2,cap:'Dose complete',start(){drawScreen(ST.disp.screen,[{t:'BALANCE',s:22},{t:f1(DOSE_G+(((tr.n*7)%5)-2)*.01,2)+' g',s:46,b:1},{t:'within tolerance',s:20}])}}));
+  // ---- 3. mix: robot shakes the vial ----
+  add(pickTasks('vial',restVial('disp'),'Robot picks up the vial to mix'));
+  const blended=powderColor(tr.u,1).lerp(new THREE.Color(0xe9e2cf),.55);
+  add(task({dur:2.0,sim:.75,cap:'Mixing: the robot shakes the vial by hand-style wrist motion',start(){this.b={...pose}},
+    upd(p){const w=p*Math.PI*2*10;pose.y=this.b.y+0.035*Math.sin(w);pose.a=this.b.a+1.2*Math.sin(w*.5);tiltDeg=8*Math.sin(w*.5);O.powder.material.color.lerp(blended,.05)},end(){tiltDeg=0;O.powder.material.color.copy(blended)}}));
+  // ---- 4. press: pour into die, discard vial, punch, collect tablet ----
+  const dieTop=ST.press.pos.clone().add(V3(0,0.0,0));const yawP=ST.press.a;
+  const dieMouth=dieTop.clone().add(V3(0,0.07,0));
+  add(task({dur:.55,cap:'Robot carries the vial to the press die',start(){this.f={...pose}},upd(p){const e=ease(p);const q=quatFor(yawP,0);const off=MOUTH.vial.clone().sub(GRIP.vial).applyQuaternion(q);const tgt=dieMouth.clone().add(V3(0,.25,0)).sub(off);const pp=polarOf(tgt);pose.a=this.f.a+(pp.a-this.f.a)*e;pose.r=this.f.r+(pp.r-this.f.r)*e;pose.y=this.f.y+(tgt.y-this.f.y)*e}}));
+  add(task({dur:1.0,sim:.1,cap:'Robot tilts the vial and pours the blend into the die',
+    start(){flow(true,0xe9e2cf,dieTop.clone().add(V3(0,0.02,0)));ST.press.mound.visible=true;this.fill=O.powder.scale.y},
+    upd(p){const e=ease(p);tiltDeg=115*e;holdMouth('vial',dieMouth.clone().add(V3(0,0.25-0.19*e,0)),yawP,tiltDeg);const rem=Math.max(0.001,this.fill*(1-clamp((p-.2)/.7,0,1)));O.powder.scale.y=rem;ST.press.mound.scale.set(1,clamp((p-.2)/.7,0.01,1),1);ST.press.mound.position.y=0.04+0.015*clamp((p-.2)/.7,0.01,1)},
+    end(){flow(false);O.powder.scale.y=0.001;tiltDeg=0}}));
+  add(mvA(0,1.0,0.95,'Robot carries the empty vial to the discard bin'));
+  add(release('vial',null,'Gripper opens',true));
+  add(task({dur:.45,cap:'Empty vial dropped into the discard bin',upd(p){O.vial.position.y=.78-(.78-.58)*p*p},end(){O.vial.visible=false}}));
+  add(pickTasks('punch',REST.punch,'Robot picks up the press punch'));
+  const dp=polarOf(dieTop);
+  add(mvA(dp.a,dp.r,0.79,'Robot positions the punch over the die'));
+  add(mvA(dp.a,dp.r,0.715,'Robot pushes the punch down and compresses the powder',.3));
+  add(task({dur:.25,cap:'Tablet formed',end(){ST.press.mound.visible=false;O.tablet.visible=true;O.tablet.position.copy(ST.press.pos);O.tablet.quaternion.copy(quatFor(yawP,0))}}));
+  add(mvA(dp.a,dp.r,0.95,'Robot lifts the punch out'));
+  add(placeTasks('punch',REST.punch,'Robot returns the punch to its holder'));
+  add(pickTasks('tablet',restTab('press'),'Robot picks the tablet out of the die'));
+  // ---- 5. hardness gauge, then dissolution ----
+  add(placeTasks('tablet',restTab('gauge'),'Robot places the tablet on the hardness gauge',.1));
+  const mTest=tr.res;
+  add(task({dur:.9,sim:.15,phase:'sense',cap:'The gauge shows hardness. The robot only reads the number.',start(){ringSet('gauge',0x86BC25,.9);curPhase='sense'},upd(p){drawScreen(ST.gauge.screen,[{t:'HARDNESS GAUGE',s:22},{t:p>.5?f1(mTest.hard,1)+' kP':'measuring',s:40,b:1,c:(p>.5&&(mTest.hard<6||mTest.hard>10))?'#ff8a80':'#E6E6E6'}])},end(){ringSet('gauge',0x86BC25,0)}}));
+  add(pickTasks('tablet',restTab('gauge'),'Robot picks the tablet up again'));
+  const vp=polarOf(ST.test.pos);
+  add(mvA(vp.a,vp.r,0.98,'Robot carries the tablet over the dissolution vessel'));
+  add(release('tablet',null,'Gripper opens',true));
+  add(task({dur:.5,cap:'Tablet drops into the dissolution vessel',upd(p){O.tablet.position.y=0.95-(0.95-0.56)*p*p},end(){}}));
+  add(pickTasks('rod',REST.rod,'Robot picks up the stirring rod'));
+  const center=ST.test.pos.clone();
+  add(mvA(vp.a,vp.r,0.9,'Robot positions the rod over the vessel'));
+  add(task({dur:3.0,sim:1.1,phase:'sense',cap:'Robot stirs the vessel. The probe shows dissolution rising. The robot only reads numbers.',
+    start(){ringSet('test',0x86BC25,.9);curPhase='sense';this.t0=performance.now()},
+    upd(p){const w=p*Math.PI*2*5;const target=center.clone().add(V3(Math.cos(w)*0.03,0,Math.sin(w)*0.03));target.y=0.86;setPoseFromWorld(target);
+      const dis=clamp(mTest.diss/100,0,1);const e=1-Math.pow(1-p,2);O.tablet.scale.set(1-.92*dis*e,1,1-.92*dis*e);ST.test.liq.material.color.setHex(0x9fd6f0).lerp(new THREE.Color(0xf3e9a8),dis*e*.8);
+      drawScreen(ST.test.screen,[{t:'DISSOLUTION PROBE',s:20},{t:f1(mTest.diss*e,1)+' %',s:40,b:1},{t:'at 30 min',s:20}],'#86BC25')},
+    end(){const ok=tr.ev.pass;ringSet('test',ok?0x86BC25:0x9AA0A6,.95);drawScreen(ST.test.screen,[{t:'DISSOLUTION PROBE',s:20},{t:f1(mTest.diss,1)+' %',s:40,b:1,c:mTest.diss>=85?'#b6e36a':'#ff8a80'},{t:ok?'PASS':'below target',s:22,c:ok?'#b6e36a':'#ff8a80'}],ok?'#86BC25':'#9AA0A6');O.tablet.visible=false;trialDone++;if(ok)passCount++;revealedCur=true;showResult(i);buildStrip()}}));
+  add(mvA(vp.a,vp.r,SAFEY,'Lifting the rod out'));
+  add(placeTasks('rod',REST.rod,'Robot returns the stirring rod to its holder'));
+  // ---- 6. clean, reason, adapt ----
+  add(task({dur:1.7,sim:TURN,phase:'reason',cap:'Robot returns to its home pose while the cell is wiped down and the engine updates its model and plans the next recipe',
+    start(){curPhase='reason';this.f={...pose}},
+    upd(p){curPhase=p<.5?'reason':'adapt';const e=ease(Math.min(1,p*2));pose.a=this.f.a+(90-this.f.a)*e;pose.r=this.f.r+(.55-this.f.r)*e;pose.y=this.f.y+(1.3-this.f.y)*e;
+      if(p>.5&&!this.shown){this.shown=true;if(i+1<run.trials.length)showTrial(i+1)}
+      const w=0.5+0.5*Math.sin(p*Math.PI*6);for(const k of ['disp','press','gauge','test'])ringSet(k,0x00A3E0,.15+.5*w*(p<.95?1:0));ST.test.liq.material.color.setHex(0x9fd6f0)},
+    end(){for(const k of ['disp','press','gauge','test'])ringSet(k,0x86BC25,0);drawScreen(ST.test.screen,[{t:'DISSOLUTION PROBE',s:20},{t:'ready',s:36,b:1}]);drawScreen(ST.disp.screen,[{t:'BALANCE',s:22},{t:'0.00 g',s:46,b:1},{t:'target 5.00 g',s:20}]);drawScreen(ST.gauge.screen,[{t:'HARDNESS GAUGE',s:22},{t:'ready',s:40,b:1}])}}));
+  return T;
+}
+function startTrial(i,keepPose){
+  ti=i;revealedCur=false;const tr=run.trials[i];tasks=makeTasks(i);ki=0;taskP=0;started=false;simNow=tr.s;
+  if(THREE_OK){resetObjects();if(!keepPose){pose.a=90;pose.r=.55;pose.y=1.3;fingers=1}applyPose()}
+  showTrial(i);
+}
+function recount(i){trialDone=0;passCount=0;faultCount=0;for(let j=0;j<i;j++){const t=run.trials[j];if(t.status!=='skipped'){trialDone++;if(t.status==='pass')passCount++}if(t.okf||t.skip)faultCount++}}
+function jumpTo(i){recount(i);lastLogN=-1;done=false;startTrial(i);buildStrip();updateHUD();$('res').innerHTML=''}
+function advance(dt){
+  while(dt>0&&playing&&!done){
+    const t=tasks[ki];
+    if(!started){t.start();t.sim0=simNow;started=true;curPhase=t.phase;if(THREE_OK)applyPose()}
+    if(t.cap)$('cap').textContent=t.cap;
+    const need=(1-taskP)*t.dur;
+    if(dt>=need){dt-=need;taskP=1;t.upd(1);simNow=t.sim0+t.sim;t.end();ki++;taskP=0;started=false;
+      if(ki>=tasks.length){buildStrip();if(ti+1<run.trials.length){startTrial(ti+1,true)}else{done=true;playing=false;syncPlay();$('cap').textContent='Run complete: '+trialDone+' trials with a result, '+passCount+' passed both targets.';curPhase=''}}}
+    else{taskP+=dt/t.dur;dt=0;t.upd(taskP);simNow=t.sim0+t.sim*taskP}
+  }
+}
+
+// ================= HUD =================
+function showTrial(i){
+  if(i>=run.trials.length)return;const tr=run.trials[i];
+  $('eTitle').textContent='Decision engine: trial '+tr.n;$('eWhy').textContent=tr.why;
+  const r=toRecipe(tr.u);$('eBars').innerHTML=ING.map((g,k)=>`<div class="bar"><span>${g.name}</span><span class="track"><span class="fill" style="width:${(tr.u[k]*100).toFixed(0)}%"></span></span><span class="val">${f1(r[k],g.k==='lube'?2:1)}%</span></div>`).join('');
+  $('res').innerHTML='';buildStrip();
+}
+function showResult(i){
+  const tr=run.trials[i],q=tr.res;const dOk=q.diss>=TARGET.dissMin,hOk=q.hard>=TARGET.hardLo&&q.hard<=TARGET.hardHi;
+  $('res').innerHTML=`<h3>Instrument readings, trial ${tr.n}</h3><div class="${dOk?'ok':'no'}"><span>Dissolved in 30 min</span><strong>${f1(q.diss,1)}%${dOk?'':' (below 85%)'}</strong></div><div class="${hOk?'ok':'no'}"><span>Hardness</span><strong>${f1(q.hard,1)} kP${hOk?'':(q.hard<TARGET.hardLo?' (too soft)':' (too hard)')}</strong></div>`;
+}
+function buildStrip(){
+  const el=$('strip');let h='';
+  run.trials.forEach((t,i)=>{let c='tchip';
+    if(i<ti||(i===ti&&revealedCur))c+=t.status==='pass'?' pass':(t.status==='skipped'?' skip':' fail');
+    if(i===ti)c+=' cur';
+    h+=`<span class="${c}" role="button" tabindex="0" data-i="${i}" aria-label="Jump to trial ${t.n}">${t.n}</span>`});
+  el.innerHTML=h;
+}
+function updateHUD(){
+  $('clockT').textContent=clockStr(Math.min(simNow,HOURS));
+  $('clockW').textContent=isPresent(simNow)?'Scientist in the lab':'Nobody in the lab';
+  document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',playing&&c.dataset.p===curPhase));
+  $('k1').textContent=trialDone;$('k2').textContent=passCount;$('k3').textContent=faultCount+' of 2';
+  const shown=run.events.filter(e=>e.t<=simNow&&(playing||simNow>0));
+  if(shown.length!==lastLogN){lastLogN=shown.length;$('log').innerHTML=shown.length?shown.slice(-6).reverse().map(e=>`<li class="k-${e.kind}"><b>${clockStr(e.t)}</b>${e.text}</li>`).join(''):'<li style="border:0;color:var(--muted)">Events appear here as the run progresses.</li>'}
+}
+function syncPlay(){$('btnPlay').textContent=playing?'Pause':(done?'Replay':(simNow>0?'Resume':'Start'))}
+
+// ================= BOOT =================
+let last=performance.now();
+function frame(now){
+  const dt=Math.min(0.05,(now-last)/1000);last=now;
+  if(THREE_OK){
+    if(playing)advance(dt*speed);
+    applyPose();placeHeld();updateFlow();
+    updateCamera(dt);for(const sp of LABELS){sp.getWorldPosition(_v);const d=camera.position.distanceTo(_v);const k=clamp(d/4.0,0.4,1.15);sp.scale.set(sp.userData.w*k,sp.userData.w/4*k,1)}renderer.render(scene,camera);
+  }else if(playing)advance(dt*speed);
+  updateHUD();requestAnimationFrame(frame);
+}
+function init(){
+  run=buildRun(7);
+  if(THREE_OK)buildScene();
+  if(!THREE_OK){$('nogl').style.display='flex'}
+  startTrial(0);buildStrip();syncPlay();updateHUD();
+  $('btnPlay').addEventListener('click',()=>{if(done){jumpTo(0)}playing=!playing;syncPlay()});
+  $('btnNext').addEventListener('click',()=>{const n=Math.min(run.trials.length-1,ti+1);playing=playing;jumpTo(n);syncPlay()});
+  $('btnRestart').addEventListener('click',()=>{playing=false;jumpTo(0);syncPlay();$('cap').textContent='Press Start to run the first trial.'});
+  $('speed').addEventListener('change',e=>{speed=+e.target.value});
+  $('camSel').addEventListener('change',e=>{if(THREE_OK)Object.assign(cam.t,PRESETS[e.target.value]())});
+  $('strip').addEventListener('click',e=>{const t=e.target.closest('.tchip');if(t){jumpTo(+t.dataset.i);syncPlay()}});
+  $('strip').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){const t=e.target.closest('.tchip');if(t){e.preventDefault();jumpTo(+t.dataset.i);syncPlay()}}});
+  requestAnimationFrame(frame);
+}
+init();
+</script>
+</body>
+</html>
