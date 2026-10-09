@@ -21,7 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from cellpoc.setup import (CATALOGUE, PROGRAM_VERSION, FormatSupport, Problem, SetupFileError, allowed_symbols, fingerprint,  # noqa: E402
-                           has_errors, load_setup, save_setup, validate)
+                           has_errors, load_setup, save_setup, to_poc_settings, validate)
 from cellpoc.setup import rules as rules_module  # noqa: E402
 from cellpoc.setup import units as units_module  # noqa: E402
 from cellpoc.setup.messages import render, rule_for  # noqa: E402
@@ -218,6 +218,121 @@ def message_checks(cl: Checklist) -> None:
               "The message document states that no rule is without a test", "")
 
 
+def convert_checks(cl: Checklist) -> None:
+    import ast
+    import hashlib
+    import random
+
+    from cellpoc.settings import settings_from_dict
+
+    poc_file = ROOT / "config" / "settings.yaml"
+    before = hashlib.sha256(poc_file.read_bytes()).hexdigest()
+    setup = setup_cases.fresh()
+    problems = validate(setup, base_dir=setup_cases.EXAMPLES)
+    conv = to_poc_settings(setup, problems)
+    accepted, why = False, ""
+    try:
+        poc = settings_from_dict(conv.settings)
+        accepted = [s.name for s in poc.cell.steps][1] == "blend" and len(poc.design_space.ingredients) == 5
+    except Exception as error:   # noqa: BLE001
+        why = str(error)[:200]
+    cl.record(conv.ok and accepted, "The example setup converts to settings that the proof of concept's own settings checker accepts ('mix' becomes 'blend', five ingredients)",
+              why or f"{len(conv.notes)} note(s) about what the proof of concept leaves out")
+    cl.record(bool(conv.yaml_text()) and conv.yaml_text().startswith("# PREVIEW ONLY") and "illustrative" in conv.yaml_text(),
+              "The preview text is labelled as a preview and as illustrative", "")
+    tree = ast.parse((SETUP_PACKAGE / "convert.py").read_text(encoding="utf-8"))
+    writes = [n.func.attr if isinstance(n.func, ast.Attribute) else n.func.id for n in ast.walk(tree) if isinstance(n, ast.Call)
+              and (isinstance(n.func, ast.Attribute) and n.func.attr in {"write", "write_text", "write_bytes", "dump", "mkdir", "unlink", "rename", "replace", "open"}
+                   or isinstance(n.func, ast.Name) and n.func.id in {"open"})]
+    # yaml.safe_dump with no stream returns text; only a second argument (a stream) would write
+    safe = [n for n in ast.walk(tree) if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute) and n.func.attr == "safe_dump" and len(n.args) > 1]
+    cl.record(not writes and not safe and "config" not in (SETUP_PACKAGE / "convert.py").read_text(encoding="utf-8").replace("config/settings.yaml", ""),
+              "The converter cannot write any file (it only builds text), and config/settings.yaml is not named as a target", ", ".join(writes) if writes else "no file calls found")
+    after = hashlib.sha256(poc_file.read_bytes()).hexdigest()
+    cl.record(before == after, "config/settings.yaml is byte-for-byte unchanged after converting", "")
+    broken = setup_cases.fresh()
+    broken["batch_size_g"] = 0
+    refused = to_poc_settings(broken, validate(broken, base_dir=setup_cases.EXAMPLES))
+    cl.record(not refused.ok and "Fix the errors first" in refused.notes[0].text, "While the setup has errors nothing is converted, and the preview says so", "")
+
+    def extra_ingredient(s):
+        s["ingredients"].append({"id": "glidant_pct", "label": "Glidant", "role": "other", "unit": "%", "min": 0, "max": 1})
+
+    def fault_in_last_step(s):
+        s["faults"]["scripted"][0]["where"] = {"step": "clean", "action": "wait"}
+
+    def no_hardness(s):
+        s["targets"]["constraints"].pop(1)
+
+    def no_noise(s):
+        s["virtual_lab"]["noise"].pop(1)
+
+    blocked = []
+    for label, change in (("an extra ingredient", extra_ingredient), ("a fault in the last step", fault_in_last_step),
+                          ("no hardness target", no_hardness), ("no hardness noise", no_noise)):
+        variant = setup_cases.fresh()
+        change(variant)
+        result = to_poc_settings(variant, validate(variant, base_dir=setup_cases.EXAMPLES))
+        if result.ok or not any(n.level == "blocking" for n in result.notes):
+            blocked.append(label)
+    cl.record(not blocked, "A setup the proof of concept cannot represent (extra ingredient, fault in the last step, no hardness target, no hardness noise) is refused with a plain note",
+              "not refused: " + ", ".join(blocked) if blocked else "4 of 4 refused")
+
+    # the converter must never say 'fine' when the PoC's own checker would refuse
+    def wider_filler(s):
+        s["ingredients"][4].update(min=40, max=70)
+
+    def slower_press(s):
+        s["equipment"]["steps"][2]["time_min"] = 40
+        s["equipment"]["phases"]["reason_min"] = 20
+
+    def one_fault(s):
+        s["faults"]["scripted"] = s["faults"]["scripted"][:1]
+
+    def no_faults(s):
+        s["faults"]["scripted"] = []
+
+    def mid_week(s):
+        s["calendar"].update(staffed_days=["Wed", "Thu", "Fri"], staffed_from="09:00", staffed_until="17:30")
+
+    def dissolution_over_100(s):
+        s["targets"]["constraints"][0]["value"] = 120
+
+    rng = random.Random(77)
+    candidates = []
+    for change in (wider_filler, slower_press, one_fault, no_faults, mid_week, dissolution_over_100):
+        variant = setup_cases.fresh()
+        change(variant)
+        candidates.append(variant)
+    for _ in range(300):
+        variant = setup_cases.fresh()
+        for _ in range(rng.choice([1, 2])):
+            setup_mutation.mutate_once(variant, rng)
+        candidates.append(variant)
+    converted = refused_ok = 0
+    disagreements = []
+    for index, variant in enumerate(candidates):
+        verdict = validate(variant, base_dir=setup_cases.EXAMPLES)
+        result = to_poc_settings(variant, verdict)
+        if has_errors(verdict) or not result.ok:
+            refused_ok += 1
+            continue
+        converted += 1
+        try:
+            settings_from_dict(result.settings)
+        except Exception as error:   # noqa: BLE001
+            disagreements.append(f"#{index}: {str(error)[:120]}")
+    damaged = {k: v for k, v in conv.settings.items() if k != "run"}
+    try:
+        settings_from_dict(damaged)
+        agreement_can_fail = False
+    except Exception:   # noqa: BLE001
+        agreement_can_fail = True
+    cl.record(agreement_can_fail, "Self-test: the proof of concept's checker does refuse converted settings that are damaged (so the agreement check above can fail)", "")
+    cl.record(not disagreements and converted >= 3, f"Whenever a setup passes the checks and converts, the proof of concept's own checker agrees ({converted} setups converted, {refused_ok} refused, out of {len(candidates)})",
+              "; ".join(disagreements[:2]))
+
+
 def housekeeping_checks(cl: Checklist) -> None:
     ignore = (ROOT / ".gitignore").read_text(encoding="utf-8").splitlines()
     cl.record("setups/" in ignore and "data/client/" in ignore, "Saved setups and client data are kept out of git (setups/ and data/client/ are ignored)", "")
@@ -235,6 +350,7 @@ def main() -> int:
     version_checks(cl)
     save_checks(cl)
     unit_checks(cl)
+    convert_checks(cl)
     message_checks(cl)
     housekeeping_checks(cl)
     architecture.check(cl)

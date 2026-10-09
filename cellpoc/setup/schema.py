@@ -28,6 +28,28 @@ def load_schema(name: str) -> dict:
     return json.loads((SCHEMA_DIR / name).read_bytes().decode("utf-8-sig"))
 
 
+def options_at(path: tuple, schema_name: str = "setup.schema.json") -> list[str]:
+    """The allowed choices for a field (or for the items of a list field), read from the schema so screens never repeat them."""
+    schema = load_schema(schema_name)
+
+    def deref(node: dict) -> dict:
+        while "$ref" in node:
+            target = schema
+            for part in node["$ref"][2:].split("/"):
+                target = target[part]
+            node = target
+        return node
+
+    node = schema
+    for part in path:
+        node = deref(node)
+        node = node["items"] if isinstance(part, int) else node["properties"][part]
+    node = deref(node)
+    if "enum" not in node and isinstance(node.get("items"), dict):
+        node = deref(node["items"])
+    return list(node["enum"])
+
+
 def fmt(value) -> str:
     """A number written the way a person would: 12 not 12.0, and no technical words for odd values."""
     if isinstance(value, bool):

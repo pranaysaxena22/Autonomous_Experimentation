@@ -42,14 +42,15 @@ def path_is_safe(reference) -> bool:
 
 
 def resolve_reference(reference, base_dir: Path | None, root: Path = PROJECT_ROOT) -> Path | None:
-    """Find a referenced file: first relative to the project folder, then next to the setup file. Never outside the project."""
+    """Find a referenced file: relative to the project folder, then next to the setup file (both must stay inside the project),
+    then in the bundled examples folder (so a saved setup still finds the example layout and example table)."""
     if not path_is_safe(reference):
         return None
-    for base in (root, base_dir):
+    for base, limit in ((root, root), (base_dir, root), (PACKAGE_EXAMPLES, PACKAGE_EXAMPLES)):
         if base is None:
             continue
         candidate = (Path(base) / reference).resolve()
-        if candidate.is_relative_to(root.resolve()) and candidate.is_file():
+        if candidate.is_relative_to(Path(limit).resolve()) and candidate.is_file():
             return candidate
     return None
 
