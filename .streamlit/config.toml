@@ -24,3 +24,4 @@ gatherUsageStats = false
 
 [server]
 enableStaticServing = true
+port = 8504
