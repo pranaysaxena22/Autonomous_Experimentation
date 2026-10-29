@@ -3,11 +3,6 @@
 A simulated autonomous formulation cell (tablet recipes), with a Streamlit dashboard.
 **Simulation with illustrative values** - nothing here is real client data.
 
-## Run the dashboard
-
-Double-click `run.bat`. If the run record does not exist yet it is built first (about a minute); then the
-dashboard opens at http://localhost:8501. It works fully offline. Stop it with Ctrl+C.
-`build_demo.bat` rebuilds the record after you change `config\settings.yaml`. See `docs\dashboard.md`.
 
 All tunable numbers are in `config\settings.yaml`. The plain-English description of the scenario is
 `docs\scenario.md` (generated from the settings by the checks).
@@ -27,10 +22,6 @@ Each stage has a health check you can double-click. It prints a PASS/FAIL list i
 Run them in order the first time: Stage 4 also confirms every generated chart page works with no internet.
 Outputs are written under `runs\` (not saved in git).
 
-## Running the demo
-
-Everything below runs on the presenting laptop alone. **No internet is needed.** The times quoted are for the
-default settings and default seed; if you change `config\settings.yaml`, run `build_demo.bat` and the times may move.
 
 ### The day before (once)
 1. Double-click `build_demo.bat` and wait for "Done" (about a minute or two). This builds the run record the dashboard shows.
@@ -41,11 +32,6 @@ default settings and default seed; if you change `config\settings.yaml`, run `bu
    `docs\scenario.md` open without the app (double-click the two .html files; they work offline). They exist after
    `check_stage3.bat` and `check_stage4.bat` have been run once. Copy them to a USB stick.
 6. On the laptop: switch off sleep/screen lock, close other programs, and set the browser to full screen (F11) at 100% zoom.
-
-### Starting the demo
-1. Double-click **`run.bat`**. A black window opens. **Leave it open: it is the app running.** (If the run record is missing it is built first, about a minute.)
-2. After about 10 seconds your browser opens at **http://localhost:8501**. If it does not, open the browser yourself and type that address.
-3. Check the top of the page: a green bar reading **"Simulation with illustrative values"**, and under it six tabs. The first tab, "The run", should say **Fri 09 Oct 18:00** and "Nobody is in the lab".
 
 ### A suggested walk-through (about 10 minutes)
 1. **The run.** Click **Next event** a few times to show the cell working through Dispense, Blend, Press, Test and Clean, with nobody in the lab. Point out the four boxes (Sense, Reason, Act, Adapt: a loop that repeats every trial) and the recipe with its "why this recipe".
