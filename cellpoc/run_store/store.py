@@ -33,7 +33,8 @@ def _build(tp: Any, value: Any) -> Any:
     origin = typing.get_origin(tp)
     if is_dataclass(tp):
         hints = typing.get_type_hints(tp)
-        return tp(**{f.name: _build(hints[f.name], value[f.name]) for f in fields(tp)})
+        # A section that is optional (its default is None) may be missing from a file written before it existed: the proof of concept's record has no 'platform' section. Every other field must be there.
+        return tp(**{f.name: (None if f.name not in value and f.default is None else _build(hints[f.name], value[f.name])) for f in fields(tp)})
     if origin in (typing.Union, types.UnionType):
         if value is None:
             return None

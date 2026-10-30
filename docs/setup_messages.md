@@ -14,7 +14,7 @@ There are three levels:
 
 Every rule below has a test: a deliberately wrong setup that must produce that message. The message shown under each rule is the one the test produced. What the person typed is quoted back in the message (for example `(you wrote '...')`).
 
-**99 messages, 99 tested, 0 without a test.**
+**134 messages, 134 tested, 0 without a test.**
 
 ## Setup file
 
@@ -369,14 +369,14 @@ _Used when a value is the wrong kind or out of range and no more specific messag
 - **Level:** Warning: does not block saving
 - **Checks that:** a process setting's ID ends with a unit
 - **Test:** a process ID with no unit at the end
-- **Message:** Process and context › Blend time › Unit: the ID 'blend_time' does not end with a unit such as _pct, _g, _kn, _kp, _n, so its unit can't be double-checked. Consider renaming it.
+- **Message:** Process and context › Blend time › Unit: the ID 'blend_time' does not end with a unit such as _pct, _g, _mg, _kn, _kp, so its unit can't be double-checked. Consider renaming it.
 
 ### R12 (unknown unit)
 
 - **Level:** Warning: does not block saving
 - **Checks that:** a process setting's unit is one this program knows
 - **Test:** a process unit the program does not know
-- **Message:** Process and context › Compression force › Unit: the unit 'furlong' is not one this program knows, so it can't be double-checked. Allowed units: %, g, kN, kP, N, min, s, h, m, deg.
+- **Message:** Process and context › Compression force › Unit: the unit 'furlong' is not one this program knows, so it can't be double-checked. Allowed units: %, g, mg, kN, kP, N, min, s, h, m, deg.
 
 ### R13 (empty)
 
@@ -469,14 +469,14 @@ _Used when a value is the wrong kind or out of range and no more specific messag
 - **Level:** Warning: does not block saving
 - **Checks that:** a target's ID ends with a unit
 - **Test:** a target ID with no unit at the end
-- **Message:** Targets › Hardness › Unit: the ID 'hardness' does not end with a unit such as _pct, _g, _kn, _kp, _n, so its unit can't be double-checked. Consider renaming it.
+- **Message:** Targets › Hardness › Unit: the ID 'hardness' does not end with a unit such as _pct, _g, _mg, _kn, _kp, so its unit can't be double-checked. Consider renaming it.
 
 ### R19 (unknown unit)
 
 - **Level:** Warning: does not block saving
 - **Checks that:** a target's unit is one this program knows
 - **Test:** a target unit the program does not know
-- **Message:** Targets › Hardness › Unit: the unit 'furlong' is not one this program knows, so it can't be double-checked. Allowed units: %, g, kN, kP, N, min, s, h, m, deg.
+- **Message:** Targets › Hardness › Unit: the unit 'furlong' is not one this program knows, so it can't be double-checked. Allowed units: %, g, mg, kN, kP, N, min, s, h, m, deg.
 
 ## Equipment
 
@@ -677,6 +677,13 @@ _Used when a value is the wrong kind or out of range and no more specific messag
 - **Test:** an experiments file that does not exist
 - **Message:** Data › Experiments file: 'no_such_table.csv' was not found. Looked in the project folder and next to the setup file. Check the name, or put the file in data/client/.
 
+### R36 (join)
+
+- **Level:** Error: blocks saving
+- **Checks that:** a file to join in exists
+- **Test:** a file to join in that does not exist
+- **Message:** Data › Joins › item 1 › File: 'no_such_file.csv' was not found. Looked in the project folder and next to the setup file. Check the name of the file to join in.
+
 ### R36 (meta)
 
 - **Level:** Error: blocks saving
@@ -732,3 +739,241 @@ _Used when a value is the wrong kind or out of range and no more specific messag
 - **Checks that:** every mapped ID is used by this setup
 - **Test:** a column mapped to an ID the setup does not use
 - **Message:** Data › Column mapping › Extra column: column 'extra_column' maps to 'unused_thing', which this setup does not use. Remove it or add 'unused_thing' to the setup.
+
+### R55
+
+- **Level:** Error: blocks saving
+- **Checks that:** the column separator and the decimal mark are not both commas
+- **Test:** columns separated by commas and a comma as the decimal mark
+- **Message:** Data › Decimal: the columns are separated by commas, so numbers cannot also use a comma as the decimal mark. Choose 'point' for the decimal mark, or change the separator.
+
+### R56 (no month)
+
+- **Level:** Error: blocks saving
+- **Checks that:** a date format has a month
+- **Test:** a date format with no month
+- **Message:** Data › Date column › Format: the date format 'yyyy' has no month. Add mm (a number), mon (3 letters) or month (the full name).
+
+### R56 (no year)
+
+- **Level:** Error: blocks saving
+- **Checks that:** a date format has a year
+- **Test:** a date format with no year
+- **Message:** Data › Date column › Format: the date format 'dd.mm' has no year. Add yyyy (4 digits) or yy (2 digits).
+
+### R56 (repeated)
+
+- **Level:** Error: blocks saving
+- **Checks that:** a date format uses each piece once
+- **Test:** a date format that uses the month twice
+- **Message:** Data › Date column › Format: the date format 'mm.mm.yyyy' uses the same piece twice. Use each piece once.
+
+### R56 (unknown piece)
+
+- **Level:** Error: blocks saving
+- **Checks that:** a date format uses only known pieces
+- **Test:** a date format with hours (a piece the reader does not know)
+- **Message:** Data › Date column › Format: the date format 'yyyy-mm-dd hh:mm' contains 'hh:mm', which is not a known piece. Use yyyy, yy, mm, dd, mon (a 3-letter month) or month (the full month name), with . / - or a space between, for example yyyy-mm-dd or mon.yy.
+
+### R57
+
+- **Level:** Error: blocks saving
+- **Checks that:** month names are twelve different names
+- **Test:** month names given as only eleven names
+- **Message:** Data › Date column › Months: month names must be a list of exactly 12 different names, January first (you listed 11).
+
+### R58
+
+- **Level:** Error: blocks saving
+- **Checks that:** a missing-value marker is visible text
+- **Test:** a missing-value marker that is only a space
+- **Message:** Data › Missing markers › item 2: a missing-value marker made only of spaces cannot be told apart from an empty cell. Remove it: an empty cell always means 'no value'.
+
+### R59 (case)
+
+- **Level:** Warning: does not block saving
+- **Checks that:** a column's declared unit has the usual capital letters
+- **Test:** a declared unit with the wrong capital letters ('KP')
+- **Message:** Data › Column units › Hardness kp: write the unit as 'kP' (you wrote 'KP').
+
+### R59 (conflict)
+
+- **Level:** Error: blocks saving
+- **Checks that:** a column's declared unit agrees with its ID
+- **Test:** hardness declared in newtons beside an ID that ends in kP
+- **Message:** Data › Column units › Hardness kp: the ID 'hardness_kp' ends in '_kp' (kilopond) but the unit says 'N' (newtons). These conflict: make them agree.
+
+### R59 (no suffix)
+
+- **Level:** Warning: does not block saving
+- **Checks that:** a column's ID ends with a unit
+- **Test:** a unit declared for an ID that ends with no unit
+- **Message:** Data › Column units › Binder supplier: the ID 'binder_supplier' does not end with a unit such as _pct, _g, _mg, _kn, _kp, so its unit can't be double-checked. Consider renaming it.
+
+### R59 (unknown unit)
+
+- **Level:** Warning: does not block saving
+- **Checks that:** a column's declared unit is one this program knows
+- **Test:** a declared unit the program does not know
+- **Message:** Data › Column units › Hardness kp: the unit 'furlong' is not one this program knows, so it can't be double-checked. Allowed units: %, g, mg, kN, kP, N, min, s, h, m, deg.
+
+### R59 (unused id)
+
+- **Level:** Warning: does not block saving
+- **Checks that:** a unit is only declared for an ID this setup uses
+- **Test:** a unit declared for an ID the setup does not use
+- **Message:** Data › Column units › Mystery pct: a unit is given for 'mystery_pct', which this setup does not use. Remove it or add 'mystery_pct' to the setup.
+
+### R60 (clash)
+
+- **Level:** Error: blocks saving
+- **Checks that:** a joined file adds no column with a name already taken
+- **Test:** a joined file with a column whose name is already in the main file
+- **Message:** Data › Joins › item 1 › File: joined.csv has a column that is already in the main file ('drug_pct'). Give the joined columns a prefix (for example 'lab_') so the names differ.
+
+### R60 (joined key)
+
+- **Level:** Error: blocks saving
+- **Checks that:** a join column is in the joined file
+- **Test:** a join column that is not in the joined file
+- **Message:** Data › Joins › item 1 › On › item 1 › Joined: the join column 'no_such_column' is not in joined.csv. Check the spelling (capital letters and extra spaces do not matter).
+
+### R60 (main key)
+
+- **Level:** Error: blocks saving
+- **Checks that:** a join column is in the main file
+- **Test:** a join column that is not in the main file
+- **Message:** Data › Joins › item 1 › On › item 1 › Main: the join column 'no_such_column' is not in experiments_example.csv. Check the spelling (capital letters and extra spaces do not matter).
+
+### R62
+
+- **Level:** Warning: does not block saving
+- **Checks that:** a sheet name is only given for an Excel file
+- **Test:** a sheet name for a file that is not an Excel file
+- **Message:** Data › Sheet: 'Sheet1' names a sheet, but experiments_example.csv is not an Excel file, so it is ignored. Remove it.
+
+### R63
+
+- **Level:** Error: blocks saving
+- **Checks that:** the text encoding is one this program knows
+- **Test:** a text encoding that does not exist
+- **Message:** Data › Encoding: 'klingon' is not a text encoding this program knows. Use utf-8, windows-1250, windows-1252, utf-16, or auto.
+
+### R64 (no amounts)
+
+- **Level:** Error: blocks saving
+- **Checks that:** there are amount columns to convert
+- **Test:** a composition rule with no mapped amount columns
+- **Message:** Data › Composition: no mapped ID ends with '_mg', so there are no amounts to convert. Map the amount columns to IDs ending '_mg'.
+
+### R64 (suffix mismatch)
+
+- **Level:** Warning: does not block saving
+- **Checks that:** the total-weight ID ends like the amounts
+- **Test:** a total-weight ID that does not end like the amounts
+- **Message:** Data › Composition › Total weight: the total weight ID 'tablet_weight_g' does not end with '_mg' like the amounts do, so its unit can't be double-checked. Consider renaming it.
+
+### R64 (weight not mapped)
+
+- **Level:** Error: blocks saving
+- **Checks that:** the total-weight column is one of the mapped IDs
+- **Test:** a total weight that no column is mapped to
+- **Message:** Data › Composition › Total weight: the total weight 'ghost_mg' is not one of the IDs the column mapping produces. Map the tablet-weight column to 'ghost_mg', or change the ID here.
+
+### R65
+
+- **Level:** Warning: does not block saving
+- **Checks that:** an assumed unit is for a column that is mapped
+- **Test:** an assumed unit for a column that is not mapped
+- **Message:** Data › Assumed units › item 1 › ID: the unit of 'ghost_mg' is marked as assumed, but no column is mapped to 'ghost_mg'. Remove it, or fix the ID.
+
+### R66 (both)
+
+- **Level:** Warning: does not block saving
+- **Checks that:** hardness has a unit column or a fixed unit, not both
+- **Test:** hardness with both a unit column and a fixed unit
+- **Message:** Data › Hardness › Unit: both a unit column and a fixed unit are given for hardness. The unit column is used and the fixed unit is ignored.
+
+### R66 (no conversion)
+
+- **Level:** Error: blocks saving
+- **Checks that:** the fixed hardness unit has a conversion
+- **Test:** a fixed hardness unit with no conversion
+- **Message:** Data › Hardness › Unit: the hardness unit 'kg/cm2' has no conversion. Add one under 'conversions' (for example divide by 1), marked 'assumed' if it is a convention.
+
+### R67
+
+- **Level:** Error: blocks saving
+- **Checks that:** a below-detection note column has everything it needs
+- **Test:** a below-detection note column with no limit
+- **Message:** Data › Below-detection rule: the below-detection rule reads a note column, so it also needs: limit.
+
+### R68
+
+- **Level:** Error: blocks saving
+- **Checks that:** the replicate grouping uses columns this setup produces
+- **Test:** a replicate grouping that names a column nothing produces
+- **Message:** Data › Replicates › Group by › item 1: the replicate grouping uses 'no_such_column', which is not a column or ID this setup produces. Use an ID from the column mapping, or experiment_id, batch_id, date, status or failure_reason.
+
+### R69 (derived)
+
+- **Level:** Error: blocks saving
+- **Checks that:** a derived-from column is one this setup produces
+- **Test:** a derived-from column that no column produces
+- **Message:** Data › Validation › Calculated from › Hardness kp: 'no_such_source' is named as calculated from, or used to calculate, another column, but it is not a column or ID this setup produces. Use an ID from the column mapping.
+
+### R69 (group)
+
+- **Level:** Error: blocks saving
+- **Checks that:** a group column is one this setup produces
+- **Test:** a group column that no column produces
+- **Message:** Data › Validation › Groups held out › Batch column › Column: the group column 'no_such_batch' is not a column or ID this setup produces. Use an ID from the column mapping, or batch_id or date.
+
+### R69 (input)
+
+- **Level:** Error: blocks saving
+- **Checks that:** an input to predict from is a column this setup produces
+- **Test:** an input that no column produces
+- **Message:** Data › Validation › Inputs › item 2: the input 'no_such_input' is not a column or ID this setup produces. Use an ID from the column mapping.
+
+### R69 (left out)
+
+- **Level:** Error: blocks saving
+- **Checks that:** a left-out column is one this setup produces
+- **Test:** a left-out column that no column produces
+- **Message:** Data › Validation › Left out of the modelling › item 1 › ID: the left-out column 'no_such_column' is not a column or ID this setup produces. Use an ID from the column mapping.
+
+### R69 (response)
+
+- **Level:** Error: blocks saving
+- **Checks that:** a result to predict is a column this setup produces
+- **Test:** a result to predict that no column produces
+- **Message:** Data › Validation › Results to predict › item 1: the result to predict, 'no_such_result', is not a column or ID this setup produces. Use an ID from the column mapping.
+
+### R70
+
+- **Level:** Error: blocks saving
+- **Checks that:** a result to predict is not also an input
+- **Test:** a result to predict that is also an input
+- **Message:** Data › Validation › Inputs › item 2: 'hardness_kp' is a result to predict, so it cannot also be an input (the model would be given the answer). Remove it from the inputs.
+
+### R71
+
+- **Level:** Error: blocks saving
+- **Checks that:** a supplier column says whether it is a confirmed supplier
+- **Test:** a supplier column that does not say whether it is confirmed
+- **Message:** Data › Validation › Groups held out › Supplier column › Confirmed supplier: say whether the supplier column is a confirmed supplier: write 'confirmed: true' if it is, or 'confirmed: false' if it only stands in for the supplier. A stand-in is labelled 'proxy, not a confirmed supplier' in every report.
+
+### R72
+
+- **Level:** Error: blocks saving
+- **Checks that:** a column is not calculated from itself
+- **Test:** a column listed as calculated from itself
+- **Message:** Data › Validation › Calculated from › Hardness kp: 'hardness_kp' is listed as calculated from itself. List only the other columns it is calculated from.
+
+### R73
+
+- **Level:** Error: blocks saving
+- **Checks that:** a left-out column is not also a result or an input
+- **Test:** a left-out column that is also a result to predict
+- **Message:** Data › Validation › Left out of the modelling › item 1 › ID: 'hardness_kp' is listed as left out of the modelling, but it is also a result to predict or an input. Remove it from one of the two lists.

@@ -223,6 +223,74 @@ _add("R41", "", "note", "Data", "the experiment table's data status is shown",
      "the experiment table is marked '{status}', so results will be labelled '{status}'.")
 _add("R54", "", "warning", "Data", "every mapped ID is used by this setup",
      "column '{column}' maps to '{id}', which this setup does not use. Remove it or add '{id}' to the setup.")
+_add("R36", "join", "error", "Data", "a file to join in exists",
+     "'{ref}' was not found. Looked in the project folder and next to the setup file. Check the name of the file to join in.")
+_add("R55", "", "error", "Data", "the column separator and the decimal mark are not both commas",
+     "the columns are separated by commas, so numbers cannot also use a comma as the decimal mark. Choose 'point' for the decimal mark, or change the separator.")
+_add("R56", "unknown_piece", "error", "Data", "a date format uses only known pieces",
+     "the date format {shown} contains '{piece}', which is not a known piece. Use yyyy, yy, mm, dd, mon (a 3-letter month) or month (the full month name), "
+     "with . / - or a space between, for example yyyy-mm-dd or mon.yy.")
+_add("R56", "no_month", "error", "Data", "a date format has a month", "the date format {shown} has no month. Add mm (a number), mon (3 letters) or month (the full name).")
+_add("R56", "no_year", "error", "Data", "a date format has a year", "the date format {shown} has no year. Add yyyy (4 digits) or yy (2 digits).")
+_add("R56", "repeated", "error", "Data", "a date format uses each piece once", "the date format {shown} uses the same piece twice. Use each piece once.")
+_add("R57", "", "error", "Data", "month names are twelve different names",
+     "month names must be a list of exactly 12 different names, January first (you listed {n}).")
+_add("R58", "", "error", "Data", "a missing-value marker is visible text",
+     "a missing-value marker made only of spaces cannot be told apart from an empty cell. Remove it: an empty cell always means 'no value'.")
+_add("R59", "conflict", "error", "Data", "a column's declared unit agrees with its ID",
+     "the ID '{id}' ends in '{suffix}' ({suffix_name}) but the unit says '{unit}' ({unit_name}). These conflict: make them agree.")
+_add("R59", "unknown_unit", "warning", "Data", "a column's declared unit is one this program knows",
+     "the unit '{unit}' is not one this program knows, so it can't be double-checked. Allowed units: {allowed_units}.")
+_add("R59", "no_suffix", "warning", "Data", "a column's ID ends with a unit",
+     "the ID '{id}' does not end with a unit such as {examples}, so its unit can't be double-checked. Consider renaming it.")
+_add("R59", "case", "warning", "Data", "a column's declared unit has the usual capital letters", "write the unit as '{canonical}' (you wrote '{unit}').")
+_add("R59", "unused_id", "warning", "Data", "a unit is only declared for an ID this setup uses",
+     "a unit is given for '{id}', which this setup does not use. Remove it or add '{id}' to the setup.")
+_add("R60", "main_key", "error", "Data", "a join column is in the main file",
+     "the join column '{column}' is not in {file}. Check the spelling (capital letters and extra spaces do not matter).")
+_add("R60", "joined_key", "error", "Data", "a join column is in the joined file",
+     "the join column '{column}' is not in {file}. Check the spelling (capital letters and extra spaces do not matter).")
+_add("R60", "clash", "error", "Data", "a joined file adds no column with a name already taken",
+     "{file} has a column that is already in the main file ('{column}'). Give the joined columns a prefix (for example 'lab_') so the names differ.")
+_add("R62", "", "warning", "Data", "a sheet name is only given for an Excel file",
+     "'{sheet}' names a sheet, but {file} is not an Excel file, so it is ignored. Remove it.")
+_add("R64", "weight_not_mapped", "error", "Data", "the total-weight column is one of the mapped IDs",
+     "the total weight '{id}' is not one of the IDs the column mapping produces. Map the tablet-weight column to '{id}', or change the ID here.")
+_add("R64", "suffix_mismatch", "warning", "Data", "the total-weight ID ends like the amounts",
+     "the total weight ID '{id}' does not end with '{suffix}' like the amounts do, so its unit can't be double-checked. Consider renaming it.")
+_add("R64", "no_amounts", "error", "Data", "there are amount columns to convert",
+     "no mapped ID ends with '{suffix}', so there are no amounts to convert. Map the amount columns to IDs ending '{suffix}'.")
+_add("R65", "", "warning", "Data", "an assumed unit is for a column that is mapped",
+     "the unit of '{id}' is marked as assumed, but no column is mapped to '{id}'. Remove it, or fix the ID.")
+_add("R66", "no_conversion", "error", "Data", "the fixed hardness unit has a conversion",
+     "the hardness unit '{unit}' has no conversion. Add one under 'conversions' (for example divide by 1), marked 'assumed' if it is a convention.")
+_add("R66", "both", "warning", "Data", "hardness has a unit column or a fixed unit, not both",
+     "both a unit column and a fixed unit are given for hardness. The unit column is used and the fixed unit is ignored.")
+_add("R67", "", "error", "Data", "a below-detection note column has everything it needs",
+     "the below-detection rule reads a note column, so it also needs: {missing}.")
+_add("R68", "", "error", "Data", "the replicate grouping uses columns this setup produces",
+     "the replicate grouping uses '{name}', which is not a column or ID this setup produces. Use an ID from the column mapping, or experiment_id, batch_id, date, status or failure_reason.")
+_add("R69", "response", "error", "Data", "a result to predict is a column this setup produces",
+     "the result to predict, '{name}', is not a column or ID this setup produces. Use an ID from the column mapping.")
+_add("R69", "input", "error", "Data", "an input to predict from is a column this setup produces",
+     "the input '{name}' is not a column or ID this setup produces. Use an ID from the column mapping.")
+_add("R69", "derived", "error", "Data", "a derived-from column is one this setup produces",
+     "'{name}' is named as calculated from, or used to calculate, another column, but it is not a column or ID this setup produces. Use an ID from the column mapping.")
+_add("R69", "group", "error", "Data", "a group column is one this setup produces",
+     "the group column '{name}' is not a column or ID this setup produces. Use an ID from the column mapping, or batch_id or date.")
+_add("R69", "left_out", "error", "Data", "a left-out column is one this setup produces",
+     "the left-out column '{name}' is not a column or ID this setup produces. Use an ID from the column mapping.")
+_add("R73", "", "error", "Data", "a left-out column is not also a result or an input",
+     "'{name}' is listed as left out of the modelling, but it is also a result to predict or an input. Remove it from one of the two lists.")
+_add("R70", "", "error", "Data", "a result to predict is not also an input",
+     "'{name}' is a result to predict, so it cannot also be an input (the model would be given the answer). Remove it from the inputs.")
+_add("R71", "", "error", "Data", "a supplier column says whether it is a confirmed supplier",
+     "say whether the supplier column is a confirmed supplier: write 'confirmed: true' if it is, or 'confirmed: false' if it only stands in for the supplier. "
+     "A stand-in is labelled 'proxy, not a confirmed supplier' in every report.")
+_add("R72", "", "error", "Data", "a column is not calculated from itself",
+     "'{name}' is listed as calculated from itself. List only the other columns it is calculated from.")
+_add("R63", "", "error", "Data", "the text encoding is one this program knows",
+     "'{encoding}' is not a text encoding this program knows. Use utf-8, windows-1250, windows-1252, utf-16, or auto.")
 
 
 def rule_for(rule_id: str, variant: str = "") -> Rule:

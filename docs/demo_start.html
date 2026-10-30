@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Demo start</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMyODI3MjgiLz48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjODZCQzI1IiBzdHJva2Utd2lkdGg9IjMiIG9wYWNpdHk9Ii41NSIvPjxjaXJjbGUgY3g9IjMyIiBjeT0iMzIiIHI9IjE0IiBmaWxsPSJub25lIiBzdHJva2U9IiM4NkJDMjUiIHN0cm9rZS13aWR0aD0iNCIvPjxjaXJjbGUgY3g9IjMyIiBjeT0iMzIiIHI9IjYiIGZpbGw9IiM4NkVCMjIiLz48L3N2Zz4=">
+<style>
+/* A plain page of links: no script, nothing computed. The font is the bundled Open Sans (../static), so it works offline. */
+@font-face{font-family:'Open Sans';font-weight:300 800;src:url('../static/OpenSans.ttf') format('truetype')}
+:root{--bg:#F5F5F5;--card:#FFFFFF;--text:#282728;--muted:#555555;--line:#E6E6E6;--green:#86BC25;--blue:#00A3E0;--soft:#EEF6DB}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'Open Sans',Arial,sans-serif;line-height:1.5;font-size:15px}
+.wrap{max-width:1100px;margin:0 auto;padding:0 24px;position:relative}
+.band{position:relative;overflow:hidden;background:#282728;border-top:4px solid var(--green);padding:28px 0 26px}
+.band::after{content:"";position:absolute;right:-90px;top:-160px;width:460px;height:460px;border-radius:50%;background:repeating-radial-gradient(circle,transparent 0 50px,rgba(134,188,37,.22) 50px 51px);pointer-events:none}
+h1{margin:0;color:#FFFFFF;font-size:2rem;line-height:1.2;font-weight:700}
+h1 .accent{font-style:italic;color:#86EB22}
+.band p{margin:8px 0 0;color:#E6E6E6;max-width:760px}
+.label{background:var(--green);color:#000000;padding:8px 0;font-size:.92rem}
+.label strong{font-weight:800}
+h2{font-size:1.15rem;margin:32px 0 12px;font-weight:700}
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:16px}
+.step{display:grid;grid-template-columns:56px 1fr auto;gap:16px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 20px;box-shadow:0 1px 3px rgba(0,0,0,.08),inset 4px 0 0 var(--green)}
+.n{width:40px;height:40px;border-radius:50%;background:#282728;color:#86EB22;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:1.05rem}
+.step h3{margin:0;font-size:1.02rem;font-weight:700}
+.step p{margin:2px 0 0;color:var(--muted);font-size:.9rem}
+.step .how{font-size:.82rem;color:var(--muted);margin-top:6px}
+a.go{display:inline-block;background:var(--green);color:#000000;font-weight:700;text-decoration:none;border-radius:6px;padding:8px 16px;white-space:nowrap}
+a.go:hover{background:#9BD52F}
+a:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+a.plain{color:#005587;font-weight:600}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 20px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.panel ul{margin:6px 0 0;padding-left:20px}
+.note{color:var(--muted);font-size:.82rem;margin:24px 0 40px}
+@media (max-width:720px){.step{grid-template-columns:44px 1fr}.step .go{grid-column:2}}
+</style>
+</head>
+<body>
+<header>
+  <div class="band"><div class="wrap">
+    <h1>Autonomous formulation cell: <span class="accent">demo</span> start</h1>
+    <p>A simulated cell that chooses tablet recipes, runs them, reads the results and learns. One app, one address: this page lists its screens in the order the demo shows them.</p>
+  </div></div>
+  <div class="label"><div class="wrap"><strong>ILLUSTRATIVE and SYNTHETIC.</strong> Everything here is a simulation with made-up values. There is no real robot, and nothing says anything about real tablets.</div></div>
+</header>
+<main class="wrap">
+  <h2>Before you start</h2>
+  <div class="panel">
+    Double-click <strong>run_app.bat</strong> and press Enter (option 1). The first time it also draws the MuJoCo view (about two minutes); after that it starts in seconds. Leave its black window open: every link below is a page of that one app, on this computer only.
+    <ul>
+      <li>Want the loop-connected version too? Double-click <strong>run_app.bat</strong> and type <strong>3</strong>: it opens at <a class="plain" href="http://localhost:8511">http://localhost:8511</a> (the first time it can take a few minutes).</li>
+      <li>If a link says it cannot connect, the black window is not running yet.</li>
+    </ul>
+  </div>
+
+  <h2>The demo, in order</h2>
+  <ol class="steps">
+    <li class="step"><span class="n">1</span><div><h3>Overview: the idea and the four numbers</h3><p>What the cell does and what it delivered, in four cards.</p><div class="how">Read the headline, point at the four cards, then the loop: sense, reason, act, adapt.</div></div><a class="go" href="http://localhost:8510/">Open the Overview</a></li>
+    <li class="step"><span class="n">2</span><div><h3>Vision: the cell reads levels and solutions from a picture</h3><p>A picture of the bench in; which solution, how full, where it stands for the arm, and whether the arm can reach it.</p><div class="how">Choose a sample scene, then try Camera with coloured liquids in clear vials.</div></div><a class="go" href="http://localhost:8510/vision">Open the vision</a></li>
+    <li class="step"><span class="n">3</span><div><h3>Results at a glance: charts for the client</h3><p>More experiments, the cell learning, working while nobody is there, where good recipes are, faults handled.</p><div class="how">Scroll top to bottom, one chart at a time. Name the manual comparison as an assumption.</div></div><a class="go" href="http://localhost:8510/results">Open the results</a></li>
+    <li class="step"><span class="n">4</span><div><h3>3D replay: the cell at work, with a jam</h3><p>The same run as a picture of the cell, including the jam and the recovery.</p><div class="how">Press Play, then click trial 8.</div></div><a class="go" href="http://localhost:8510/replay">Open the 3D replay</a></li>
+    <li class="step"><span class="n">5</span><div><h3>Physics (MuJoCo): the plan played by a physics model</h3><p>Two animated trials and the reach and collision checks.</p><div class="how">Watch the jam trial, then show the table: every station reachable, nothing touched.</div></div><a class="go" href="http://localhost:8510/physics">Open the physics view</a></li>
+    <li class="step"><span class="n">6</span><div><h3>Live run: watch it happen</h3><p>The cell runs while you watch; results appear when their tests finish.</p><div class="how">Press Start the live view, then Start the run, speed 1800x.</div></div><a class="go" href="http://localhost:8510/live_run">Open the live run</a></li>
+    <li class="step"><span class="n">7</span><div><h3>Setup: describe a study</h3><p>Ten screens in plain words, with mistakes shown beside the field.</p><div class="how">Pick Example 1, press Load example, click two screens, then go to screen 10.</div></div><a class="go" href="http://localhost:8510/setup">Open the setup</a></li>
+    <li class="step"><span class="n">8</span><div><h3>Reports</h3><p>Everything can be taken away as a labelled report.</p><div class="how">Press Report as PDF.</div></div><a class="go" href="http://localhost:8510/reports">Open the reports</a></li>
+  </ol>
+
+  <h2>If a question comes up</h2>
+  <div class="panel">
+    <ul>
+      <li><a class="plain" href="guides/client_demo_script.md">The client demo script</a>: what to say at each step, and what is real and what is not.</li>
+      <li><a class="plain" href="http://localhost:8510/data_and_model">Data and model</a> and <a class="plain" href="http://localhost:8510/the_run">The run</a>: the evidence behind the numbers.</li>
+      <li><a class="plain" href="guides/demo_script.md">The longer demo script</a> and <a class="plain" href="guides/system_explained.md">the system explained in plain language</a>.</li>
+      <li><a class="plain" href="guides/work_report.md">The work report</a>: what was built and the honest findings.</li>
+    </ul>
+  </div>
+  <p class="note">Illustrative: every number, chart and result in the demo comes from a simulation with made-up values.</p>
+</main>
+</body>
+</html>

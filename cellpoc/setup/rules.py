@@ -7,8 +7,7 @@ cannot judge, because the schema already reports a malformed part in its own wor
 """
 from __future__ import annotations
 
-import csv
-import io
+import codecs
 import json
 import math
 import re
@@ -21,6 +20,7 @@ from .layout_rules import measurable, reach_policy, reach_report, station_ids
 from .messages import make_problem
 from .problems import Problem
 from .schema import fmt, shown
+from .tablefile import EXCEL_SUFFIXES, match_key, normalise_name, read_header
 from .units import UNITS, compare
 
 EXPECTED_STEPS = ["dispense", "mix", "press", "test", "clean"]
@@ -370,13 +370,33 @@ def r_noise(c: Ctx) -> Iterator[Problem]:
 
 
 # ---------------------------------------------------------------- 9 Data
-def _header(path: Path) -> list[str] | None:
-    try:
-        with open(path, "rb") as handle:
-            first = handle.read(100_000).decode("utf-8-sig", errors="replace")
-        return next(csv.reader(io.StringIO(first, newline="")), None)
-    except (OSError, csv.Error):
-        return None
+DATE_PIECES = ("month", "yyyy", "mon", "yy", "mm", "dd")        # longer pieces first, so 'month' is not read as 'mon'
+
+
+def date_pieces(text: str) -> tuple[list[str] | None, str]:
+    """Split a date format such as 'dd.mm.yyyy' into its pieces. (None, the unknown part) if something in it is not a known piece."""
+    rest, pieces = text.strip().lower(), []
+    while rest:
+        if rest[0] in "./- ":
+            rest = rest[1:]
+            continue
+        for piece in DATE_PIECES:
+            if rest.startswith(piece):
+                pieces.append(piece)
+                rest = rest[len(piece):]
+                break
+        else:
+            return None, rest[:8]
+    return pieces, ""
+
+
+def _joins(c: Ctx, data: dict) -> list[tuple[int, dict, Path | None]]:
+    """The other files the setup joins in: (position, the join, where the file is or None)."""
+    found = []
+    for i, join in items(data, "joins"):
+        reference = join.get("file")
+        found.append((i, join, resolve_reference(reference, c.base_dir, c.root) if is_text(reference) and path_is_safe(reference) else None))
+    return found
 
 
 def r_data(c: Ctx) -> Iterator[Problem]:
@@ -386,14 +406,38 @@ def r_data(c: Ctx) -> Iterator[Problem]:
     found: dict[str, Path | None] = {}
     for key, variant in (("experiments_file", "experiments"), ("meta_file", "meta")):
         reference = data.get(key)
-        if is_text(reference) and path_is_safe(reference):
+        if is_text(reference) and reference.strip() and path_is_safe(reference):
             found[key] = resolve_reference(reference, c.base_dir, c.root)
             if found[key] is None:
                 yield c.make("R36", variant, ("data", key), ref=reference)
+    joins = _joins(c, data)
+    for i, join, where in joins:
+        if where is None and is_text(join.get("file")) and path_is_safe(join["file"]):
+            yield c.make("R36", "join", ("data", "joins", i, "file"), ref=join["file"])
     table = found.get("experiments_file")
     mapping = data.get("column_map") if isinstance(data.get("column_map"), dict) else {}
-    header = _header(table) if table else None
-    if header is not None:
+    main = read_header(table, data) if table else None
+    if main is not None:
+        main_keys = {match_key(n) for n in main.names}
+        available = set(main_keys)
+        for i, join, where in joins:
+            joined = read_header(where, {k: v for k, v in data.items() if k in ("encoding", "delimiter", "sheet")}) if where else None
+            if joined is None:
+                continue
+            on = items(join, "on")
+            key_names = {match_key(pair["joined"]) for _, pair in on if is_text(pair.get("joined"))}
+            joined_keys = {match_key(n) for n in joined.names}
+            for j, pair in on:
+                if is_text(pair.get("main")) and match_key(pair["main"]) not in main_keys:
+                    yield c.make("R60", "main_key", ("data", "joins", i, "on", j, "main"), column=pair["main"], file=table.name)
+                if is_text(pair.get("joined")) and match_key(pair["joined"]) not in joined_keys:
+                    yield c.make("R60", "joined_key", ("data", "joins", i, "on", j, "joined"), column=pair["joined"], file=where.name)
+            prefix = join.get("prefix") if is_text(join.get("prefix")) else ""
+            added = {match_key(prefix + n) for n in joined.names if normalise_name(n) and match_key(n) not in key_names}
+            clash = sorted(added & available)
+            if clash:
+                yield c.make("R60", "clash", ("data", "joins", i, "file"), file=where.name, column=clash[0])
+            available |= added
         wanted: list[tuple[str, tuple]] = [(k, ("data", "column_map")) for k in mapping]
         for key, value in (data.get("id_columns") if isinstance(data.get("id_columns"), dict) else {}).items():
             wanted.append((value, ("data", "id_columns", key)))
@@ -403,9 +447,9 @@ def r_data(c: Ctx) -> Iterator[Problem]:
                 wanted.append((block.get(key), ("data", section, key)))
         reported: set = set()
         for column, path in wanted:
-            if is_text(column) and column not in header and column not in reported:
-                reported.add(column)
-                have = ", ".join(header[:6]) + (", ..." if len(header) > 6 else "")
+            if is_text(column) and column.strip() and match_key(column) not in available and match_key(column) not in reported:
+                reported.add(match_key(column))
+                have = ", ".join(normalise_name(n) for n in main.names[:6]) + (", ..." if len(main.names) > 6 else "")
                 yield c.make("R37", "", path, column=column, have=have)
     hardness = data.get("hardness") if isinstance(data.get("hardness"), dict) else {}
     if mapping:
@@ -430,7 +474,8 @@ def r_data(c: Ctx) -> Iterator[Problem]:
                 if ident in first_column:
                     yield c.make("R39", "", ("data", "column_map", column), first=first_column[ident], second=column, id=ident)
                 first_column.setdefault(ident, column)
-        used = (_ids(c, "ingredients", "process_factors", "context_factors") | set(needs) | covered & {hardness.get("to")})
+        used = (_ids(c, "ingredients", "process_factors", "context_factors") | set(needs)
+                | ({hardness["to"]} if is_text(hardness.get("to")) else set()))
         for column, ident in mapping.items():
             if is_text(ident) and ident not in used:
                 yield c.make("R54", "", ("data", "column_map", column), column=column, id=ident)
@@ -449,6 +494,155 @@ def r_data(c: Ctx) -> Iterator[Problem]:
             status = None
         if is_text(status):
             yield c.make("R41", "", ("data", "meta_file"), status=status)
+    yield from _reading_settings(c, data, table)
+    yield from _cleaning_settings(c, data)
+    yield from _validation_settings(c, data)
+
+
+def _validation_settings(c: Ctx, data: dict) -> Iterator[Problem]:
+    """The modelling section: the names it uses must be columns this setup produces, and a result is never also an input."""
+    validation = data.get("validation")
+    if not isinstance(validation, dict):
+        return
+    column_map = data.get("column_map")
+    mapped = {v for v in column_map.values() if is_text(v)} if isinstance(column_map, dict) else set()
+    hardness = data.get("hardness") if isinstance(data.get("hardness"), dict) else {}
+    id_columns = data.get("id_columns") if isinstance(data.get("id_columns"), dict) else {}
+    # what the cleaned table holds: mapped IDs, the hardness result, the identifying columns and the setup's own quantities
+    produced = {match_key(x) for x in mapped | {"experiment_id", "replicate_no", "batch_id", "date", "status", "failure_reason", "source_row"}}
+    produced |= {match_key(hardness["to"])} if is_text(hardness.get("to")) else set()
+    produced |= {match_key(x) for x in _ids(c, "ingredients", "process_factors", "context_factors")}
+    produced |= {match_key(v) for v in id_columns.values() if is_text(v)}
+    composition = data.get("composition")
+    if isinstance(composition, dict) and is_text(composition.get("total_weight")):     # amounts in mg also arrive as a percentage of the total weight
+        suffix = composition.get("amount_suffix") if is_text(composition.get("amount_suffix")) and composition["amount_suffix"] else "_mg"
+        percent = next(u.suffix for u in UNITS if u.symbol == "%")       # the unit list stays in one place (units.py)
+        produced |= {match_key(x[:-len(suffix)] + percent) for x in mapped if x.endswith(suffix) and x != composition["total_weight"]}
+    for _, target in items(c.s, "targets", "constraints"):
+        produced |= {match_key(target["response"])} if is_text(target.get("response")) else set()
+    known = bool(mapped)
+
+    def unknown(path: tuple, variant: str, name) -> Iterator[Problem]:
+        if known and is_text(name) and name.strip() and match_key(name) not in produced:
+            yield c.make("R69", variant, path, name=name)
+
+    responses = validation.get("responses") if isinstance(validation.get("responses"), list) else []
+    inputs = validation.get("inputs") if isinstance(validation.get("inputs"), list) else []
+    for i, name in enumerate(responses):
+        yield from unknown(("data", "validation", "responses", i), "response", name)
+    for i, name in enumerate(inputs):
+        yield from unknown(("data", "validation", "inputs", i), "input", name)
+        if is_text(name) and name in responses:
+            yield c.make("R70", "", ("data", "validation", "inputs", i), name=name)
+    for i, item in items(validation, "left_out"):
+        yield from unknown(("data", "validation", "left_out", i, "id"), "left_out", item.get("id"))
+        if is_text(item.get("id")) and (item["id"] in responses or item["id"] in inputs):
+            yield c.make("R73", "", ("data", "validation", "left_out", i, "id"), name=item["id"])
+    derived = validation.get("derived_from") if isinstance(validation.get("derived_from"), dict) else {}
+    for key, sources in derived.items():
+        yield from unknown(("data", "validation", "derived_from", key), "derived", key)
+        for source in sources if isinstance(sources, list) else []:
+            yield from unknown(("data", "validation", "derived_from", key), "derived", source)
+            if source == key:
+                yield c.make("R72", "", ("data", "validation", "derived_from", key), name=key)
+    groups = validation.get("groups") if isinstance(validation.get("groups"), dict) else {}
+    for kind, group in groups.items():
+        if not isinstance(group, dict):
+            continue
+        columns = group.get("column") if isinstance(group.get("column"), list) else [group.get("column")]
+        for name in columns:
+            yield from unknown(("data", "validation", "groups", kind, "column"), "group", name)
+        if kind == "supplier" and not isinstance(group.get("confirmed"), bool):
+            yield c.make("R71", "", ("data", "validation", "groups", "supplier", "confirmed"))
+
+
+def _cleaning_settings(c: Ctx, data: dict) -> Iterator[Problem]:
+    """The settings that say how values are cleaned: composition (mg to percent), assumed units, the fixed hardness unit, below-detection."""
+    column_map = data.get("column_map")
+    mapped = {v for v in column_map.values() if is_text(v)} if isinstance(column_map, dict) else set()
+    composition = data.get("composition")
+    if isinstance(composition, dict) and is_text(composition.get("total_weight")):
+        total = composition["total_weight"]
+        suffix = composition.get("amount_suffix") if is_text(composition.get("amount_suffix")) and composition["amount_suffix"] else "_mg"
+        if mapped and total not in mapped:
+            yield c.make("R64", "weight_not_mapped", ("data", "composition", "total_weight"), id=total)
+        elif not total.endswith(suffix):
+            yield c.make("R64", "suffix_mismatch", ("data", "composition", "total_weight"), id=total, suffix=suffix)
+        if mapped and not [m for m in mapped if m.endswith(suffix) and m != total]:
+            yield c.make("R64", "no_amounts", ("data", "composition"), suffix=suffix)
+    assumed = data.get("assumed_units")
+    if isinstance(assumed, list) and mapped:
+        for i, item in items(data, "assumed_units"):
+            if is_text(item.get("id")) and item["id"] not in mapped:
+                yield c.make("R65", "", ("data", "assumed_units", i, "id"), id=item["id"])
+    hardness = data.get("hardness")
+    if isinstance(hardness, dict):
+        unit, conversions = hardness.get("unit"), hardness.get("conversions")
+        if is_text(unit) and unit.strip():
+            if isinstance(conversions, dict) and unit not in conversions:
+                yield c.make("R66", "no_conversion", ("data", "hardness", "unit"), unit=unit)
+            if is_text(hardness.get("unit_column")) and hardness["unit_column"].strip():
+                yield c.make("R66", "both", ("data", "hardness", "unit"))
+    replicates = data.get("replicates")
+    if isinstance(replicates, dict) and isinstance(replicates.get("group_by"), list):
+        id_columns = data.get("id_columns") if isinstance(data.get("id_columns"), dict) else {}
+        allowed = {"experiment_id", "replicate_no", "batch_id", "date", "status", "failure_reason", "source_row"} | mapped
+        allowed |= {match_key(k) for k in (column_map if isinstance(column_map, dict) else {})} | {match_key(v) for v in id_columns.values() if is_text(v)}
+        allowed = {match_key(a) for a in allowed}
+        for i, entry in enumerate(replicates["group_by"]):
+            if is_text(entry) and entry.strip() and match_key(entry) not in allowed:
+                yield c.make("R68", "", ("data", "replicates", "group_by", i), name=entry)
+    below = data.get("below_detection")
+    if isinstance(below, dict) and is_text(below.get("note_column")) and below["note_column"].strip():
+        missing = [name for name in ("marker", "quantity", "limit") if below.get(name) in (None, "")]
+        if missing:
+            yield c.make("R67", "", ("data", "below_detection"), missing=", ".join(missing))
+
+
+def _reading_settings(c: Ctx, data: dict, table: Path | None) -> Iterator[Problem]:
+    """The settings that say how to read the file: separator, decimal mark, encoding, sheet, dates, missing markers, units."""
+    if data.get("delimiter") == "comma" and data.get("decimal") == "comma":
+        yield c.make("R55", "", ("data", "decimal"))
+    encoding = data.get("encoding")
+    if is_text(encoding) and encoding.strip().lower() not in ("auto", ""):
+        try:
+            codecs.lookup(encoding.strip())
+        except LookupError:
+            yield c.make("R63", "", ("data", "encoding"), encoding=encoding)
+    sheet = data.get("sheet")
+    if is_text(sheet) and sheet.strip() and table is not None and table.suffix.lower() not in EXCEL_SUFFIXES:
+        yield c.make("R62", "", ("data", "sheet"), sheet=sheet, file=table.name)
+    date = data.get("date")
+    if isinstance(date, dict):
+        pieces, unknown = date_pieces(date["format"]) if is_text(date.get("format")) and date["format"].strip() else (None, "")
+        if is_text(date.get("format")) and date["format"].strip():
+            if pieces is None:
+                yield c.make("R56", "unknown_piece", ("data", "date", "format"), shown=shown(date["format"]), piece=unknown)
+            else:
+                if not any(p in pieces for p in ("mm", "mon", "month")):
+                    yield c.make("R56", "no_month", ("data", "date", "format"), shown=shown(date["format"]))
+                if not any(p in pieces for p in ("yyyy", "yy")):
+                    yield c.make("R56", "no_year", ("data", "date", "format"), shown=shown(date["format"]))
+                if len(pieces) != len(set(pieces)):
+                    yield c.make("R56", "repeated", ("data", "date", "format"), shown=shown(date["format"]))
+        months = date.get("months")
+        if isinstance(months, list) and all(is_text(m) for m in months):
+            if len(months) != 12 or len({m.strip().casefold() for m in months}) != 12:
+                yield c.make("R57", "", ("data", "date", "months"), n=len(months))
+    markers = data.get("missing_markers")
+    if isinstance(markers, list):
+        for i, marker in enumerate(markers):
+            if is_text(marker) and marker and not marker.strip():
+                yield c.make("R58", "", ("data", "missing_markers", i))
+    units = data.get("column_units")
+    if isinstance(units, dict):
+        mapped = {v for v in (data.get("column_map") or {}).values() if is_text(v)} if isinstance(data.get("column_map"), dict) else set()
+        used = _ids(c, "ingredients", "process_factors", "context_factors") | mapped
+        for ident, unit in units.items():
+            if is_text(ident) and is_text(unit):
+                yield from _unit_problems(c, "R59", ("data", "column_units", ident), ident, unit)
+                if used and ident not in used:
+                    yield c.make("R59", "unused_id", ("data", "column_units", ident), id=ident)
 
 
 SEMANTIC_RULES = [r_project, r_ranges, r_balance, r_duplicate_ids, r_balance_range, r_recipe_rules, r_process_units, r_targets,

@@ -1,0 +1,267 @@
+# =====================================================================
+#  SETUP FILE - ILLUSTRATIVE EXAMPLE 2 of 3: a week with random faults
+#  A seven-day run staffed Monday to Friday, with no scripted faults: jams happen by chance (about 8% of trials for the binder bottle, 5% for the press).
+#  Everything here is an illustrative placeholder, not real client data. It uses the same equipment layout and the same example experiment table
+#  as the first example, so it can be loaded in the setup app ("Load example" with this one chosen) and run with "Save and run it" or in the live run.
+# =====================================================================
+format_version: 1
+project:
+  name: 'Illustrative study 2: a week with random faults'
+  data_status: illustrative
+display:
+  banner: Simulation with illustrative values
+  accent_colour: '#86BC25'
+  font: Open Sans
+batch_size_g: 20
+ingredients:
+- id: drug_pct
+  label: Drug (active)
+  role: active
+  unit: '%'
+  min: 10
+  max: 30
+- id: binder_pct
+  label: Binder
+  role: binder
+  unit: '%'
+  min: 2
+  max: 6
+- id: disintegrant_pct
+  label: Disintegrant
+  role: disintegrant
+  unit: '%'
+  min: 1
+  max: 8
+- id: lubricant_pct
+  label: Lubricant
+  role: lubricant
+  unit: '%'
+  min: 0.25
+  max: 2
+- id: filler_pct
+  label: Filler
+  role: balance
+  unit: '%'
+  min: 50
+  max: 90
+recipe_rules:
+- rule: sum_to
+  total: 100
+  tolerance: 0.05
+  unit: '%'
+  label: Ingredients must add up to 100%
+- rule: at_most
+  items:
+  - binder_pct
+  - disintegrant_pct
+  limit: 12
+  unit: '%'
+  label: Binder plus disintegrant at most 12%
+process_factors:
+- id: compression_force_kn
+  label: Compression force
+  unit: kN
+  min: 5
+  max: 20
+- id: blend_time_min
+  label: Blend time
+  unit: min
+  min: 5
+  max: 30
+context_factors:
+- id: binder_supplier
+  label: Binder supplier
+  values:
+  - A
+  - B
+  - C
+- id: filler_grade
+  label: Filler grade
+  values:
+  - MCC-101
+  - MCC-102
+- id: dissolution_instrument
+  label: Dissolution instrument
+  values:
+  - DT-1
+  - DT-2
+targets:
+  constraints:
+  - response: dissolution_30min_pct
+    label: Dissolution at 30 min
+    unit: '%'
+    goal: at_least
+    value: 85
+    margin_scale: 5
+  - response: hardness_kp
+    label: Hardness
+    unit: kP
+    goal: between
+    low: 6
+    high: 10
+  - response: friability_pct
+    label: Friability
+    unit: '%'
+    goal: at_most
+    value: 1.0
+    required: false
+  objectives:
+  - quantity: friability_pct
+    label: Friability
+    unit: '%'
+    goal: minimise
+  - quantity: drug_pct
+    label: Drug load
+    unit: '%'
+    goal: maximise
+equipment:
+  layout_file: cell_layout_example.json
+  steps:
+  - name: dispense
+    label: Dispense
+    time_min: 30
+    stations:
+    - rack
+    - balance
+    - bottle_shelf
+  - name: mix
+    label: Mix
+    time_min: 45
+    stations:
+    - balance
+  - name: press
+    label: Press
+    time_min: 30
+    stations:
+    - balance
+    - press
+    - discard
+  - name: test
+    label: Test
+    time_min: 75
+    stations:
+    - press
+    - gauge
+    - friabilator
+    - vessel
+  - name: clean
+    label: Clean
+    time_min: 60
+    stations: []
+  measurement_step: test
+  phases:
+    act:
+    - dispense
+    - mix
+    - press
+    sense:
+    - test
+    reason_adapt_step: clean
+    reason_min: 30
+calendar:
+  start: 2026-10-12 08:00
+  duration_h: 168
+  staffed_days:
+  - Mon
+  - Tue
+  - Wed
+  - Thu
+  - Fri
+  staffed_from: 08:00
+  staffed_until: '18:00'
+faults:
+  purge_min: 45
+  clean_after_skip: true
+  recovery:
+    tap_shake_s: 120
+    max_retries: 1
+  scripted: []
+  random:
+  - where:
+      step: dispense
+      action: pour
+      ingredient: binder_pct
+    cause: binder bottle jam
+    chance_per_trial: 0.08
+    retry_succeeds_chance: 0.6
+  - where:
+      step: press
+      action: press
+    cause: press jam
+    chance_per_trial: 0.05
+    retry_succeeds_chance: 0.7
+baseline:
+  manual_trials_per_week: 12
+comparison:
+  campaigns: 40
+  trials_per_campaign: 30
+engine:
+  initial_recipes: 6
+  candidates_per_decision: 3000
+  model: auto
+virtual_lab:
+  noise:
+  - quantity: dissolution_30min_pct
+    sd: 2.0
+  - quantity: hardness_kp
+    sd: 0.35
+seeds:
+  run: 2027
+data:
+  experiments_file: experiments_example.csv
+  meta_file: experiments_example.meta.json
+  encoding: utf-8
+  line_endings: any
+  delimiter: auto
+  decimal: auto
+  missing_markers:
+  - NA
+  date:
+    format: yyyy-mm-dd
+    language: en
+  id_columns:
+    experiment: experiment_id
+    replicate: replicate_no
+    batch: batch_id
+    date: date
+    status: status
+    failure_reason: failure_reason
+  column_map:
+    drug_pct: drug_pct
+    filler_pct: filler_pct
+    binder_pct: binder_pct
+    disintegrant_pct: disintegrant_pct
+    lubricant_pct: lubricant_pct
+    compression_force_kN: compression_force_kn
+    blend_time_min: blend_time_min
+    binder_supplier: binder_supplier
+    filler_grade: filler_grade
+    dissolution_instrument: dissolution_instrument
+    dissolution_30min_pct: dissolution_30min_pct
+    friability_pct: friability_pct
+  hardness:
+    value_column: hardness
+    unit_column: hardness_unit
+    to: hardness_kp
+    conversions:
+      kP:
+        divide_by: 1
+      N:
+        divide_by: 9.807
+  below_detection:
+    note_column: friability_note
+    marker: <0.05
+    quantity: friability_pct
+    limit: 0.05
+    rule: use_limit_and_flag
+  replicates:
+    group_by:
+    - experiment_id
+    rule: mean
+    keep_individual_rows_for_noise_estimate: true
+  missing_values:
+    policy: skip_for_that_response
+  failed_runs:
+    status_column: status
+    failed_value: failed
+    policy: exclude_from_models_keep_in_failure_statistics

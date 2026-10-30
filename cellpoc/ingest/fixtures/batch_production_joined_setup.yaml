@@ -1,0 +1,62 @@
+# INGESTION FIXTURE (not a full setup): Laboratory.csv joined with Process.csv and Normalization.csv.
+# Laboratory.csv has one row per batch; Process.csv has the same batches (matched on batch AND product code); Normalization.csv has one row per product code.
+# Real third-party data, used only to test ingestion and models; never presented as client data. Source, DOI and licence: data/public/SOURCES.md
+# The data files themselves are not in git (data/public/ is git-ignored); this file only says how to read them.
+context_factors:
+- id: product_code
+  label: Product code
+  values: []
+- id: strength
+  label: Strength
+  values: []
+- id: weekend
+  label: Made at a weekend
+  values: []
+data:
+  experiments_file: data/public/batch_production/Laboratory.csv
+  delimiter: semicolon
+  decimal: point
+  missing_markers:
+  - '#N/A'
+  id_columns:
+    experiment: batch
+    batch: batch
+    date: start
+  date:
+    format: mon.yy
+    language: sl
+  joins:
+  - file: data/public/batch_production/Process.csv
+    prefix: process_
+    'on':
+    - main: batch
+      joined: batch
+    - main: code
+      joined: code
+  - file: data/public/batch_production/Normalization.csv
+    prefix: norm_
+    'on':
+    - main: code
+      joined: Product code
+  column_map:
+    code: product_code
+    strength: strength
+    size: batch_size
+    api_water: api_water
+    api_content: api_content
+    tbl_av_hardness: tbl_av_hardness
+    dissolution_av: dissolution_av
+    batch_yield: batch_yield
+    process_weekend: weekend
+    process_tbl_speed_mean: tbl_speed_mean
+    process_total_waste: total_waste
+    process_Drug release average (%): drug_release_average
+    process_Impurity O: impurity_o_process
+    norm_Normalisation factor: normalisation_factor
+    norm_Batch Size (tablets): norm_batch_size
+  provenance:
+    data_status: real
+    label: 'REAL PUBLIC DATA, NOT CLIENT DATA: tablet production batches (Zagar and Mihelic, Scientific Data 9:99, 2022; CC BY 4.0). Used only
+      to test ingestion and models.'
+    source: data/public/SOURCES.md (DOI 10.6084/m9.figshare.c.5645578)
+    contains_real_client_data: false

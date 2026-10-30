@@ -267,16 +267,19 @@ def convert_checks(cl: Checklist) -> None:
     def no_noise(s):
         s["virtual_lab"]["noise"].pop(1)
 
+    def required_friability(s):                          # (2026-10-16) the simulated lab produces no friability reading, so a required friability target would show 'No result' on every trial
+        s["targets"]["constraints"][2]["required"] = True
+
     blocked = []
     for label, change in (("an extra ingredient", extra_ingredient), ("a fault in the last step", fault_in_last_step),
-                          ("no hardness target", no_hardness), ("no hardness noise", no_noise)):
+                          ("no hardness target", no_hardness), ("no hardness noise", no_noise), ("a required target the simulated lab cannot produce", required_friability)):
         variant = setup_cases.fresh()
         change(variant)
         result = to_poc_settings(variant, validate(variant, base_dir=setup_cases.EXAMPLES))
         if result.ok or not any(n.level == "blocking" for n in result.notes):
             blocked.append(label)
-    cl.record(not blocked, "A setup the proof of concept cannot represent (extra ingredient, fault in the last step, no hardness target, no hardness noise) is refused with a plain note",
-              "not refused: " + ", ".join(blocked) if blocked else "4 of 4 refused")
+    cl.record(not blocked, "A setup the proof of concept cannot represent (extra ingredient, fault in the last step, no hardness target, no hardness noise, a required target the simulated lab cannot produce) is refused with a plain note",
+              "not refused: " + ", ".join(blocked) if blocked else "5 of 5 refused")
 
     # the converter must never say 'fine' when the PoC's own checker would refuse
     def wider_filler(s):
@@ -333,6 +336,35 @@ def convert_checks(cl: Checklist) -> None:
               "; ".join(disagreements[:2]))
 
 
+def data_reading_checks(cl: Checklist) -> None:
+    """Stage 2a: the setup checker looks at files the way the reader will (separator, encoding, name matching) and treats unused parts as optional."""
+    header = ("experiment_id;drug_pct;filler_pct;Binder_PCT ;disintegrant_pct;lubricant_pct;binder_supplier;filler_grade;dissolution_instrument;"
+              "compression_force_kN;blend_time_min;dissolution_30min_pct;hardness;hardness_unit;friability_pct\n")
+
+    def edit(setup):
+        setup["data"]["experiments_file"] = "semicolon.csv"
+        setup["data"]["id_columns"] = {"experiment": "experiment_id"}          # the other identifying columns are not in this file
+        setup["data"]["column_map"] = {"DRUG_pct": "drug_pct", "filler_pct": "filler_pct", "binder_pct": "binder_pct",
+                                       "disintegrant_pct": "disintegrant_pct", "lubricant_pct": "lubricant_pct", "compression_force_kn": "compression_force_kn",
+                                       "blend_time_min": "blend_time_min", "binder_supplier": "binder_supplier", "filler_grade": "filler_grade",
+                                       "dissolution_instrument": "dissolution_instrument", "dissolution_30min_pct": "dissolution_30min_pct",
+                                       "friability_pct": "friability_pct", "hardness": "hardness_kp"}
+        for part in ("hardness", "below_detection", "replicates", "missing_values", "failed_runs", "meta_file", "encoding", "line_endings"):
+            setup["data"].pop(part, None)
+
+    for label, content in (("a semicolon file (capital letters and a trailing space in two names)", header.encode("utf-8")),
+                           ("the same file saved as UTF-16 with a byte-order mark", b"\xff\xfe" + header.encode("utf-16-le"))):
+        problems = [p for p in setup_cases._in_temp_project(edit, {"semicolon.csv": content}) if p.level == "error"]
+        cl.record(not problems, f"The setup checker finds the columns of {label}, ignoring capital letters and extra spaces, and accepts a setup that leaves out every unused part",
+                  "; ".join(p.message for p in problems[:2]))
+    wrong = setup_cases._in_temp_project(lambda s: (edit(s), s["data"]["column_map"].update({"no_such_column": "drug_pct"})), {"semicolon.csv": header.encode("utf-8")})
+    named = next((p for p in wrong if p.rule == "R37"), None)
+    cl.record(named is not None and "experiment_id, drug_pct" in named.text,
+              "A wrong column name in a semicolon file is reported with the file's real columns listed (so the file was split correctly)", named.text[:120] if named else "not reported")
+    bad_encoding = setup_cases._in_temp_project(edit, {"semicolon.csv": "experiment_id;č\n".encode("cp1250")})
+    cl.record(not any(p.rule == "X99" for p in bad_encoding), "A file that is not in the stated encoding never crashes the checker", "")
+
+
 def housekeeping_checks(cl: Checklist) -> None:
     ignore = (ROOT / ".gitignore").read_text(encoding="utf-8").splitlines()
     cl.record("setups/" in ignore and "data/client/" in ignore, "Saved setups and client data are kept out of git (setups/ and data/client/ are ignored)", "")
@@ -351,6 +383,7 @@ def main() -> int:
     save_checks(cl)
     unit_checks(cl)
     convert_checks(cl)
+    data_reading_checks(cl)
     message_checks(cl)
     housekeeping_checks(cl)
     setup_app_tests.run(cl)

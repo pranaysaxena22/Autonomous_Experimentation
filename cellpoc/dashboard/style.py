@@ -27,6 +27,9 @@ RED = "#DA291C"            # supplemental, for errors
 
 FONT_STACK = "'Open Sans', Arial, sans-serif"
 FALLBACK_BANNER = "Simulation with illustrative values"
+# The tab icon (three concentric green rings on dark gray, an SVG written out as text), so no file or web address is needed.
+FAVICON = ("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMyODI3MjgiLz48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjODZC"
+           "QzI1IiBzdHJva2Utd2lkdGg9IjMiIG9wYWNpdHk9Ii41NSIvPjxjaXJjbGUgY3g9IjMyIiBjeT0iMzIiIHI9IjE0IiBmaWxsPSJub25lIiBzdHJva2U9IiM4NkJDMjUiIHN0cm9rZS13aWR0aD0iNCIvPjxjaXJjbGUgY3g9IjMyIiBjeT0iMzIiIHI9IjYiIGZpbGw9IiM4NkVCMjIiLz48L3N2Zz4=")
 
 # How a chart colours each kind of stretch (the run record says which kind each one is).
 LOOK_COLOURS = {
@@ -55,30 +58,37 @@ CSS = f"""
   font-family: {FONT_STACK};
 }}
 .stApp {{ color: {DARK}; }}
-.block-container {{ padding-top: 1rem; max-width: 1400px; }}
-h2, h3, h4 {{ font-weight: 700; color: {DARK}; }}
+.block-container {{ padding-top: 1rem; padding-bottom: 3rem; max-width: 1400px; }}
+h2, h3, h4 {{ font-weight: 700; color: {DARK}; letter-spacing: -0.005em; }}
+.stApp h2 {{ font-size: 1.45rem; margin-top: 0.5rem; }}
+.stApp h3 {{ font-size: 1.15rem; }}
+/* lists: tighter and even, so a page of bullets reads as a list and not as separate paragraphs */
+.stApp [data-testid="stMarkdownContainer"] ul, .stApp [data-testid="stMarkdownContainer"] ol {{ margin: 0 0 0.75rem 0; }}
+.stApp [data-testid="stMarkdownContainer"] li {{ margin-bottom: 0.3rem; }}
+.stApp [data-testid="stMarkdownContainer"] li p {{ margin: 0; }}
 
-/* header band: dark surface, signature green rule, concentric rings (decoration only) */
+/* header band: dark surface, signature green rule, concentric rings (decoration only); it and the green bar below form one block */
 .dl-header {{ position: relative; overflow: hidden; background: {DARK}; border-top: 4px solid {GREEN};
-  border-radius: 0 0 8px 8px; padding: 22px 28px 20px 28px; margin-bottom: 0; }}
-.dl-header h1 {{ margin: 0; padding: 0; color: {WHITE}; font-size: 2rem; font-weight: 700; line-height: 1.2; }}
+  border-radius: 0; padding: 22px 28px 20px 28px; margin-bottom: 0; }}
+.dl-header h1 {{ margin: 0; padding: 0; color: {WHITE}; font-size: 2rem; font-weight: 700; line-height: 1.2; letter-spacing: -0.005em; }}
 .dl-accent-word {{ font-style: italic; color: {NEON}; font-weight: 700; }}
 .dl-header p {{ margin: 6px 0 0 0; color: {RULE}; font-size: 0.95rem; }}
 .dl-rings {{ position: absolute; right: -50px; top: -50px; width: 260px; height: 260px; opacity: 0.35; pointer-events: none; }}
 
-.sim-banner {{ background: {GREEN}; color: #000000; padding: 8px 16px; font-weight: 700; border-radius: 0 0 4px 4px; margin-bottom: 8px; }}
-.sim-stamp {{ border-left: 4px solid {GREEN}; padding: 2px 10px; color: {GREY_TEXT}; font-size: 0.85rem; margin: 2px 0 10px 0; }}
+.sim-banner {{ background: {GREEN}; color: #000000; padding: 8px 28px; font-weight: 700; border-radius: 0 0 8px 8px; margin-bottom: 16px; }}
+.sim-stamp {{ border-left: 3px solid {GREEN}; padding: 1px 10px; color: {GREY_TEXT}; font-size: 0.78rem; margin: 2px 0 14px 0; }}
 
 /* tabs */
-.stTabs [data-baseweb="tab-list"] {{ gap: 6px; border-bottom: 1px solid {RULE}; }}
-.stTabs [data-baseweb="tab"] {{ font-weight: 600; color: {GREY_TEXT}; }}
+.stTabs [data-baseweb="tab-list"] {{ gap: 6px; border-bottom: 1px solid {RULE}; margin-bottom: 4px; }}
+.stTabs [data-baseweb="tab"] {{ font-weight: 600; color: {GREY_TEXT}; padding: 8px 14px; }}
 .stTabs [aria-selected="true"] {{ color: {DARK}; }}
 
-/* cards, metrics, buttons, expanders */
-[data-testid="stMetric"] {{ background: {WHITE}; border: 1px solid {RULE}; border-left: 5px solid {GREEN}; border-radius: 6px; padding: 10px 16px; }}
-[data-testid="stExpander"] {{ border: 1px solid {RULE}; border-radius: 6px; }}
-.stButton button {{ border: 2px solid {GREEN}; background: {WHITE}; color: {DARK}; font-weight: 700; }}
+/* cards, metrics, buttons, expanders: white, thin border, soft shadow, green left edge on metrics */
+[data-testid="stMetric"] {{ background: {WHITE}; border: 1px solid {RULE}; border-left: 5px solid {GREEN}; border-radius: 8px; padding: 12px 16px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); }}
+[data-testid="stExpander"] {{ border: 1px solid {RULE}; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06); }}
+.stButton button {{ border: 2px solid {GREEN}; background: {WHITE}; color: {DARK}; font-weight: 700; border-radius: 6px; }}
 .stButton button:hover:not(:disabled) {{ background: {GREEN}; color: #000000; border-color: {GREEN}; }}
+.stButton button:focus-visible {{ outline: 3px solid {BLUE}; outline-offset: 2px; }}
 .stButton button:disabled {{ border-color: {RULE}; color: {GREY_TEXT}; }}
 
 /* stations */
@@ -111,7 +121,7 @@ RINGS = (f'<svg class="dl-rings" viewBox="0 0 200 200">'
 
 def apply() -> None:
     """Page settings and fonts. Must run before anything else is drawn."""
-    st.set_page_config(page_title="Autonomous formulation cell", layout="wide")
+    st.set_page_config(page_title="Autonomous formulation cell", page_icon=FAVICON, layout="wide")
     st.markdown(CSS, unsafe_allow_html=True)
 
 

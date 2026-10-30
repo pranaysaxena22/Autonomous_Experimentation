@@ -11,7 +11,7 @@ from pathlib import Path
 
 import streamlit as st
 
-from cellpoc.setup import (PROJECT_ROOT, SETUP_FILE_SCREEN, Problem, blank_setup, example_setup_path, load_setup,
+from cellpoc.setup import (PROJECT_ROOT, SETUP_FILE_SCREEN, Problem, blank_setup, example_choices, example_setup_path, load_setup,
                            validate)
 from cellpoc.setup.files import PACKAGE_EXAMPLES, SETUPS_FOLDER
 from cellpoc.setup.validate import load_layout
@@ -23,7 +23,7 @@ SAVED_NAME = re.compile(r"^[a-z0-9][a-z0-9_-]{0,59}$")
 
 def init() -> None:
     for key, value in (("setup", None), ("ver", 0), ("load_id", 0), ("screen", 0), ("origin", ""), ("base_dir", None),
-                       ("load_problems", []), ("saved", None), ("linked", False)):
+                       ("load_problems", []), ("saved", None), ("linked", False), ("run_result", None), ("dashboard_started", False), ("live_started", False)):
         st.session_state.setdefault(key, value)
 
 
@@ -33,7 +33,7 @@ def saved_names() -> list[str]:
 
 
 def _replace(setup: dict, origin: str, base_dir: Path | None) -> None:
-    st.session_state.update(setup=setup, origin=origin, base_dir=base_dir, screen=0, saved=None, load_problems=[])
+    st.session_state.update(setup=setup, origin=origin, base_dir=base_dir, screen=0, saved=None, load_problems=[], run_result=None, dashboard_started=False, live_started=False)
     st.session_state["ver"] += 1
     st.session_state["load_id"] += 1
 
@@ -43,9 +43,21 @@ def start_blank() -> None:
     _replace(blank_setup(shown["banner"], shown["accent_colour"], shown["font"]), "a blank setup", PACKAGE_EXAMPLES)
 
 
-def load_example() -> None:
-    loaded = load_setup(example_setup_path())
-    _replace(copy.deepcopy(loaded.setup), "the bundled example", PACKAGE_EXAMPLES)
+def example_labels() -> list[str]:
+    return [label for label, _ in example_choices()]
+
+
+def load_example(picker: str | None = None, number: int | None = None) -> None:
+    """Load an illustrative example: the one chosen in the picker whose widget key is `picker`, or example `number` (1 to 3); with neither, the standard example 1."""
+    choices = example_choices()
+    index = 0
+    if number is not None and 1 <= number <= len(choices):
+        index = number - 1
+    elif picker and st.session_state.get(picker) in [label for label, _ in choices]:
+        index = [label for label, _ in choices].index(st.session_state[picker])
+    path = choices[index][1] if choices else example_setup_path()
+    loaded = load_setup(path)
+    _replace(copy.deepcopy(loaded.setup), "the bundled example" if index == 0 else f"the bundled example {index + 1}", PACKAGE_EXAMPLES)
 
 
 def open_saved(name: str | None) -> None:
@@ -101,4 +113,4 @@ def default_name(setup: dict) -> str:
     return slug or "my-study"
 
 
-__all__ = ["init", "saved_names", "start_blank", "load_example", "open_saved", "go", "check", "counts", "count_text", "default_name"]
+__all__ = ["init", "saved_names", "start_blank", "load_example", "example_labels", "open_saved", "go", "check", "counts", "count_text", "default_name"]

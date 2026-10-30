@@ -1,0 +1,20 @@
+{
+  "name": "sealed acceptance lab",
+  "version": 2,
+  "sealed_on": "2026-10-12",
+  "status": "sealed",
+  "fingerprint_rule": "SHA-256 of the file's bytes after replacing every CRLF with LF",
+  "files": {
+    "acceptance/sealed_lab.py": "7fb11a31b54173bc5da87784cd3f25be602ae90a91a64a3942bedced9eda6093",
+    "acceptance/README.md": "2cbad9e984f0a171886ddd15923bbb4cffe167eca6beba504a5e4f14cfe9a6b0"
+  },
+  "sealed_seed_first": 7000101,
+  "sealed_seed_last": 7000140,
+  "sealed_seeds": "7000101 to 7000140 (40 acceptance campaigns)",
+  "retired_seed_first": 7000001,
+  "retired_seed_last": 7000040,
+  "retired_seeds": "7000001 to 7000040 (RETIRED: 7000001 and 7000002 were used before the first seal; never to be used for acceptance)",
+  "git_tag": "sealed-lab-v2",
+  "supersedes": "sealed-lab-v1",
+  "note": "Version 2 differs from version 1 only in the one line of sealed_lab.py that designates the acceptance seeds. This manifest is itself fingerprinted in docs/decisions.md. See acceptance/README.md."
+}

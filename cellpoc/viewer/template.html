@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMyODI3MjgiLz48Y2lyY2xlIGN4PSIzMiIgY3k9IjMyIiByPSIyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjODZCQzI1IiBzdHJva2Utd2lkdGg9IjMiIG9wYWNpdHk9Ii41NSIvPjxjaXJjbGUgY3g9IjMyIiBjeT0iMzIiIHI9IjE0IiBmaWxsPSJub25lIiBzdHJva2U9IiM4NkJDMjUiIHN0cm9rZS13aWR0aD0iNCIvPjxjaXJjbGUgY3g9IjMyIiBjeT0iMzIiIHI9IjYiIGZpbGw9IiM4NkVCMjIiLz48L3N2Zz4="><style>
+@font-face{font-family:'Open Sans';font-weight:300 800;src:url(data:font/ttf;base64,__FONT_BASE64__) format('truetype')}
+:root{--bg:#F5F5F5;--card:#FFFFFF;--text:#282728;--muted:#555555;--line:#E6E6E6;--line2:#C9C9C9;--green:#86BC25;--blue:#00A3E0;--red:#DA291C;--amber:#E8A317;--soft:#EEF6DB;--fail:#9AA0A6;--stage:#E9EBEE}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1A1A1A;--card:#282728;--text:#E6E6E6;--muted:#A8A8A8;--line:#444444;--line2:#5A5A5A;--soft:#2F3A1C;--stage:#1D1F21}}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'Open Sans',Arial,sans-serif;line-height:1.5;font-size:14px}
+/* Same page frame as the live page and the dashboard: dark band with a 4px green rule, green "illustrative" bar, white cards. The band and bar together are kept as tall as the old header so the 3D stage sits where it always did. */
+.wrap{max-width:1320px;margin:0 auto;padding:0 16px;position:relative}
+.band{position:relative;overflow:hidden;background:#282728;border-top:4px solid var(--green);padding:14px 0 13px}
+.band::after{content:"";position:absolute;right:-90px;top:-150px;width:420px;height:420px;border-radius:50%;background:repeating-radial-gradient(circle,transparent 0 46px,rgba(134,188,37,.22) 46px 47px);pointer-events:none}
+h1{font-size:1.6rem;margin:0;font-weight:700;line-height:1.2;color:#FFFFFF;letter-spacing:-.005em}
+.sub{margin:4px 0 0;color:#E6E6E6;max-width:900px;font-size:.9rem}
+.label{background:var(--green);color:#000000;padding:8px 0;font-size:.9rem}
+.label strong{font-weight:800}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-top:12px;box-shadow:0 1px 3px rgba(0,0,0,.10),inset 4px 0 0 var(--green)}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+button,select{font:inherit}
+button{cursor:pointer;border-radius:6px;padding:6px 12px;border:1.5px solid var(--green);background:transparent;color:var(--text);font-weight:600}
+button:hover{background:var(--soft)}
+button.primary{background:var(--green);color:#000}
+button.primary:hover{background:#9BD52F}
+button:focus-visible,select:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+select{padding:6px 8px;border-radius:6px;border:1.5px solid var(--line2);background:var(--card);color:var(--text)}
+label.sm{font-size:.8rem;color:var(--muted)}
+.grid2{display:grid;grid-template-columns:minmax(0,1.75fr) minmax(0,1fr);gap:14px}
+@media (max-width:980px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.stagewrap{position:relative;width:100%;aspect-ratio:16/10;border-radius:10px;overflow:hidden;background:var(--stage);border:1px solid var(--line)}
+.stagewrap canvas{width:100%;height:100%;display:block}
+.cap{position:absolute;left:10px;right:10px;bottom:10px;background:rgba(40,39,40,.92);color:#fff;padding:8px 12px;border-radius:8px;font-size:.88rem;min-height:38px}
+.fault{position:absolute;left:10px;right:10px;top:10px;background:var(--red);color:#fff;padding:8px 12px;border-radius:8px;font-weight:700;display:none}
+.recov{position:absolute;right:10px;top:10px;background:var(--amber);color:#000;padding:4px 12px;border-radius:999px;font-weight:700;font-size:.8rem;display:none}
+.nogl{position:absolute;inset:0;display:none;align-items:center;justify-content:center;padding:20px;text-align:center;color:var(--muted);background:var(--stage)}
+.strip{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+.tchip{min-width:32px;height:30px;padding:0 6px;border-radius:6px;border:1.5px solid var(--line2);display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:700;cursor:pointer;background:var(--card);color:var(--text)}
+.tchip.pass{background:var(--green);border-color:var(--green);color:#000}.tchip.fail{background:var(--fail);border-color:var(--fail);color:#000}.tchip.skip{background:var(--red);border-color:var(--red);color:#fff}
+.tchip.rec{box-shadow:inset 0 -4px 0 var(--amber)}.tchip.cur{outline:3px solid var(--text);outline-offset:1px}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.76rem;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-2px}
+.panel>div{margin-bottom:12px}
+.clock{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:8px 12px;background:var(--soft);border-radius:8px}
+.clock .t{font-size:1.25rem;font-weight:700}.clock .w{font-size:.82rem;color:var(--muted)}
+.chips{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.chip{padding:2px 11px;border-radius:999px;border:1.5px solid var(--line2);color:var(--muted);font-weight:600;font-size:.78rem}
+.chip.on{background:var(--green);border-color:var(--green);color:#000}
+.now{background:var(--bg);border-radius:8px;padding:8px 10px;font-size:.85rem;border-left:4px solid var(--green)}
+.now.fail{border-left-color:var(--red)}.now.rec{border-left-color:var(--amber)}
+.now b{display:block}.now small{color:var(--muted)}
+.res div{display:flex;justify-content:space-between;gap:8px;padding:6px 10px;border-radius:6px;background:var(--bg);font-size:.85rem;margin-top:4px;border-left:4px solid var(--line2)}
+.res .ok{border-left-color:var(--green)}.res .no{border-left-color:var(--red)}
+.acts{list-style:none;margin:0;padding:0;max-height:220px;overflow:auto;font-size:.78rem}
+.acts li{padding:4px 0 4px 9px;border-bottom:1px solid var(--line);border-left:4px solid var(--line2);cursor:pointer}
+.acts li.cur{background:var(--soft);font-weight:700}.acts li.failed{border-left-color:var(--red)}.acts li.recovery{border-left-color:var(--amber)}.acts li.planned{border-left-color:var(--green)}
+.slider{width:100%}
+.note{font-size:.78rem;color:var(--muted);margin:8px 0 0}
+#selftest{display:none}
+</style>
+</head>
+<body>
+<header>
+  <div class="band"><div class="wrap">
+    <h1>__TITLE__</h1>
+    <p class="sub">A replay of what the cell's executor reported: every movement below is taken from the executed timeline, and every number on a screen is a reading from it. The viewer calculates no result of its own.</p>
+  </div></div>
+  <div class="label"><div class="wrap"><strong>__LABEL__</strong> The arm and tools are generic stand-ins, not a real robot's reach, forces or cycle times. Recovery actions after a fault are drawn like any other action and marked.</div></div>
+</header>
+<main class="wrap">
+<section class="card">
+  <div class="controls">
+    <button id="btnPlay" class="primary">Play</button>
+    <button id="btnPrev">&#9664; Action</button><button id="btnNext">Action &#9654;</button>
+    <label class="sm" for="speed">Speed</label>
+    <select id="speed"><option value="20">20x</option><option value="60" selected>60x</option><option value="200">200x</option><option value="600">600x</option></select>
+    <label class="sm" for="camSel">Camera</label><select id="camSel"></select>
+  </div>
+  <div class="grid2">
+    <div>
+      <div class="stagewrap" id="stage">
+        <div class="nogl" id="nogl">The 3D view could not start in this browser (WebGL is unavailable). The timeline, the readings and the list of actions below still work.</div>
+        <div class="fault" id="fault"></div><div class="recov" id="recov">RECOVERY ACTION</div>
+        <div class="cap" id="cap"></div>
+      </div>
+      <input class="slider" id="slider" type="range" min="0" max="1000" value="0" aria-label="Moment in the trial">
+      <div class="strip" id="strip" aria-label="Trials"></div>
+      <div class="legend"><span><i style="background:var(--green)"></i>Good</span><span><i style="background:var(--fail)"></i>Not good</span><span><i style="background:var(--red)"></i>Skipped (no result)</span><span><i style="background:var(--amber)"></i>Recovered from a fault</span></div>
+    </div>
+    <aside class="panel">
+      <div><div class="clock"><span class="t" id="clockT">0:00</span><span class="w" id="clockW"></span></div><div class="chips"><span class="chip" data-p="act">Act</span><span class="chip" data-p="sense">Sense</span><span class="chip" data-p="reason">Reason</span><span class="chip" data-p="adapt">Adapt</span></div></div>
+      <div id="now" class="now"></div>
+      <div class="res" id="res"></div>
+      <div><b>Actions of this trial</b><ul class="acts" id="acts"></ul></div>
+    </aside>
+  </div>
+  <p class="note" id="foot"></p>
+</section>
+</main>
+<pre id="selftest"></pre>
+<script type="application/json" id="data-layout">__LAYOUT_JSON__</script>
+<script type="application/json" id="data-timelines">__TIMELINES_JSON__</script>
+<script>/*__THREE__*/</script>
+<script>/*__VIEWER_JS__*/</script>
+</body>
+</html>

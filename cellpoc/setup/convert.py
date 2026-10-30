@@ -72,6 +72,10 @@ def _blocking(setup: dict) -> list[Note]:
         notes.append(Note("blocking", f"Dissolution of at least {dissolution['value']:g}% cannot be reached (the proof of concept caps it at 100%)."))
     if not hardness or hardness["goal"] != "between":
         notes.append(Note("blocking", f"The proof of concept needs a 'between' target for {HARDNESS}."))
+    for c in setup["targets"]["constraints"]:          # (2026-10-16) a required target the simulated lab cannot produce would show 'No result' on every trial: say so instead of running a useless simulation
+        if c.get("required", True) and c["response"] not in (DISSOLUTION, HARDNESS):
+            notes.append(Note("blocking", f"'{c['label']}' is a required target, but the simulated lab produces dissolution and hardness only, so every trial would show 'No result'. "
+                                          "Mark it optional, or remove it, to simulate this setup."))
     noise = {n["quantity"] for n in setup["virtual_lab"]["noise"]}
     for need in (DISSOLUTION, HARDNESS):
         if need not in noise:

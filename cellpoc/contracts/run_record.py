@@ -213,6 +213,22 @@ class AboutRecord:
 
 
 @dataclass
+class PlatformInfo:
+    """What a platform run (Stage 8) adds to the record, all of it written out in advance as plain text so the dashboard only displays it.
+
+    A record from the proof of concept has no such section (it is None) and the dashboard shows exactly what it always showed."""
+    label: str                    # e.g. "SYNTHETIC platform run ..." (the weakest data status of the inputs)
+    setup_name: str
+    executor: str                 # which executor ran the plans (the Python stand-in, or later a real one)
+    replay_file: str              # the 3D replay file, next to the record
+    pipeline: list[str]           # the pieces a trial passes through, one line each
+    trial_rows: list[str]         # one line per trial: what was planned and what really happened
+    data_lines: list[str]         # the client's data file as the reader found it (data status, row accounting, notes)
+    model_lines: list[str]        # what the modelling step made of that data, and what the engine used
+    limits: list[str]             # what this platform run does not show
+
+
+@dataclass
 class RunRecord:
     meta: RunMeta
     ingredient_labels: dict[str, str]
@@ -227,3 +243,4 @@ class RunRecord:
     comparison: ComparisonResult | None = None               # the headline strategy comparison (no faults)
     comparison_with_faults: ComparisonResult | None = None   # the same with the scripted faults applied
     about: AboutRecord | None = None
+    platform: PlatformInfo | None = None                     # present only for a platform run (Stage 8)

@@ -60,7 +60,16 @@
       }
     },
     "events": {"$ref": "#/$defs/unchanged"}, "alerts": {"$ref": "#/$defs/unchanged"}, "handovers": {"$ref": "#/$defs/unchanged"}, "summary": {"$ref": "#/$defs/unchanged"},
-    "snapshots": {"$ref": "#/$defs/unchanged"}, "comparison": {"$ref": "#/$defs/unchanged"}, "comparison_with_faults": {"$ref": "#/$defs/unchanged"}, "about": {"$ref": "#/$defs/unchanged"}
+    "snapshots": {"$ref": "#/$defs/unchanged"}, "comparison": {"$ref": "#/$defs/unchanged"}, "comparison_with_faults": {"$ref": "#/$defs/unchanged"}, "about": {"$ref": "#/$defs/unchanged"},
+    "platform": {
+      "type": "object", "additionalProperties": false,
+      "required": ["label", "setup_name", "executor", "replay_file", "pipeline", "trial_rows", "data_lines", "model_lines", "limits"],
+      "properties": {
+        "label": {"type": "string", "minLength": 1}, "setup_name": {"type": "string", "minLength": 1}, "executor": {"type": "string", "minLength": 1}, "replay_file": {"$ref": "#/$defs/relative_path"},
+        "pipeline": {"type": "array", "items": {"type": "string"}}, "trial_rows": {"type": "array", "items": {"type": "string"}}, "data_lines": {"type": "array", "items": {"type": "string"}},
+        "model_lines": {"type": "array", "items": {"type": "string"}}, "limits": {"type": "array", "items": {"type": "string"}}
+      }
+    }
   },
   "$defs": {
     "data_status": {"enum": ["synthetic", "illustrative", "real", "validated"]},

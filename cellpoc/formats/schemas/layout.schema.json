@@ -11,11 +11,16 @@
     "data_status": {"enum": ["synthetic", "illustrative", "real", "validated"]},
     "layout_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]*$"},
     "units": {"type": "string", "pattern": "metres and degrees"},
+    "instruments": {"type": "object", "additionalProperties": false, "description": "Optional settings for the devices the cell reads. Everything here has a default, so a layout without this block behaves exactly as before.",
+      "properties": {"barcode": {"type": "object", "additionalProperties": false, "description": "How vials are labelled and how a bad scan is handled: the label is prefix + trial number padded to digits (V- and 3 digits give V-008); retries is how many times the vial is turned and read again after an unreadable scan; rotate_s is how long the turn takes.",
+        "properties": {"prefix": {"type": "string", "pattern": "^[A-Za-z0-9_-]{1,8}$"}, "digits": {"type": "integer", "minimum": 1, "maximum": 8}, "retries": {"type": "integer", "minimum": 0, "maximum": 3}, "rotate_s": {"type": "integer", "minimum": 1, "maximum": 60}}}}},
     "robot": {
       "type": "object", "additionalProperties": false,
       "required": ["id", "type", "base_m", "shoulder_height_m", "links_m", "reach_m", "safe_height_m", "home", "grip"],
       "properties": {
         "id": {"$ref": "#/$defs/id"}, "type": {"type": "string"},
+        "action_seconds": {"type": "object", "additionalProperties": false, "description": "Optional: how long the arm takes to pick up, to place and to hold a vial to the scanner, in seconds. Without it each takes 60 s, as before.",
+          "properties": {"pick": {"type": "integer", "minimum": 5, "maximum": 600}, "place": {"type": "integer", "minimum": 5, "maximum": 600}, "scan": {"type": "integer", "minimum": 5, "maximum": 600}}},
         "base_m": {"type": "object", "additionalProperties": false, "required": ["x", "y", "z"], "properties": {"x": {"type": "number"}, "y": {"type": "number"}, "z": {"type": "number"}}},
         "shoulder_height_m": {"type": "number", "exclusiveMinimum": 0},
         "links_m": {"type": "object", "additionalProperties": false, "required": ["upper_arm", "forearm", "wrist_to_tip"],

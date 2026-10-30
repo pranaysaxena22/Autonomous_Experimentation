@@ -24,6 +24,17 @@ from cellpoc.setup_app import style
 from checks import setup_cases, setup_mutation
 from checks.common import Checklist
 
+THIS_COMPUTER = ("localhost", "127.0.0.1", "[::1]")
+
+
+def offline_problems(name: str, text: str) -> list[str]:
+    """What would make an app depend on something outside this computer, found in its source text: a web font, script or CDN; an address for any computer other than this one;
+    an address put together from pieces (text matching cannot see where such an address points)."""
+    found = [f"{name}: {m}" for m in re.findall(r"@import|<script|googleapis|cdn\.", text)]
+    found += [f"{name}: an address for another computer ({host})" for host in re.findall(r"https?://([^\s'\"<>)/:]+)", text) if host not in THIS_COMPUTER]
+    found += [f"{name}: an address put together from pieces ({m.strip()})" for m in re.findall(r"['\"]https?['\"]\s*\+|['\"]://|://['\"]", text)]
+    return found
+
 APP = PROJECT_ROOT / "setup_app.py"
 APP_PACKAGE = PROJECT_ROOT / "cellpoc" / "setup_app"
 SETTINGS = PROJECT_ROOT / "config" / "settings.yaml"
@@ -211,8 +222,10 @@ def run(cl: Checklist) -> None:
 
     # ---------- offline, own fonts and colours
     sources = {p: p.read_text(encoding="utf-8") for p in list(APP_PACKAGE.glob("*.py")) + [APP]}
-    online = [f"{p.name}: {m}" for p, t in sources.items() for m in re.findall(r"https?://[^\s'\"<>)]+|@import|<script|googleapis|cdn\.", t)]
-    cl.record(not online, "The app's code contains no web address, script tag, web font or CDN: it works offline", "; ".join(online[:3]) if online else f"{len(sources)} files read")
+    # What this checks is that the app depends on nothing outside this computer: no web font, script or CDN, no address for any OTHER computer, and no address put together from pieces (which text matching cannot see).
+    # An address for THIS computer (localhost) is allowed, because the app starts the dashboard and the live page on this computer and links to them; what those programs really listen on is tested in setup_run_check.py.
+    online = [problem for p, t in sources.items() for problem in offline_problems(p.name, t)]
+    cl.record(not online, "The app's code names no web font, script or CDN, no address for any other computer and no address put together from pieces (an address for this computer, localhost, is allowed): it works offline", "; ".join(online[:3]) if online else f"{len(sources)} files read")
     pages = " ".join(m.value for m in at.markdown)
     cl.record(not re.search(r"https?://", pages) and "url('app/static/OpenSans.ttf')" in pages, "The page's own text and styles name no web address; the font is the bundled Open Sans file", "")
     shown = style.project_display()

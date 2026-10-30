@@ -641,6 +641,204 @@ def _(s):
     pass
 
 
+# ---- how to read the file (Stage 2a): separator, decimal mark, encoding, sheet, dates, missing markers, units, joins
+def _with_joined_file(change, content: bytes = b"experiment_id;extra_value\nE00001;1\n"):
+    def run() -> list[Problem]:
+        def edit(setup):
+            setup["data"]["joins"] = [{"file": "joined.csv", "on": [{"main": "experiment_id", "joined": "experiment_id"}]}]
+            change(setup)
+        return _in_temp_project(edit, {"joined.csv": content})
+    return run
+
+
+@mutation("R55", "", "columns separated by commas and a comma as the decimal mark")
+def _(s):
+    s["data"]["delimiter"], s["data"]["decimal"] = "comma", "comma"
+
+
+@mutation("R63", "", "a text encoding that does not exist")
+def _(s):
+    s["data"]["encoding"] = "klingon"
+
+
+@mutation("R62", "", "a sheet name for a file that is not an Excel file")
+def _(s):
+    s["data"]["sheet"] = "Sheet1"
+
+
+@mutation("R56", "unknown_piece", "a date format with hours (a piece the reader does not know)")
+def _(s):
+    s["data"]["date"]["format"] = "yyyy-mm-dd hh:mm"
+
+
+@mutation("R56", "no_month", "a date format with no month")
+def _(s):
+    s["data"]["date"]["format"] = "yyyy"
+
+
+@mutation("R56", "no_year", "a date format with no year")
+def _(s):
+    s["data"]["date"]["format"] = "dd.mm"
+
+
+@mutation("R56", "repeated", "a date format that uses the month twice")
+def _(s):
+    s["data"]["date"]["format"] = "mm.mm.yyyy"
+
+
+@mutation("R57", "", "month names given as only eleven names")
+def _(s):
+    s["data"]["date"]["months"] = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov"]
+
+
+@mutation("R58", "", "a missing-value marker that is only a space")
+def _(s):
+    s["data"]["missing_markers"] = ["NA", " "]
+
+
+@mutation("R59", "conflict", "hardness declared in newtons beside an ID that ends in kP")
+def _(s):
+    s["data"]["column_units"] = {"hardness_kp": "N"}
+
+
+@mutation("R59", "unknown_unit", "a declared unit the program does not know")
+def _(s):
+    s["data"]["column_units"] = {"hardness_kp": "furlong"}
+
+
+@mutation("R59", "no_suffix", "a unit declared for an ID that ends with no unit")
+def _(s):
+    s["data"]["column_units"] = {"binder_supplier": "%"}
+
+
+@mutation("R59", "case", "a declared unit with the wrong capital letters ('KP')")
+def _(s):
+    s["data"]["column_units"] = {"hardness_kp": "KP"}
+
+
+@mutation("R59", "unused_id", "a unit declared for an ID the setup does not use")
+def _(s):
+    s["data"]["column_units"] = {"mystery_pct": "%"}
+
+
+@case("R36", "join", "a file to join in that does not exist")
+def _():
+    def edit(setup):
+        setup["data"]["joins"] = [{"file": "no_such_file.csv", "on": [{"main": "experiment_id", "joined": "experiment_id"}]}]
+    return _in_temp_project(edit)
+
+
+@case("R60", "main_key", "a join column that is not in the main file")
+def _():
+    return _with_joined_file(lambda s: s["data"]["joins"][0]["on"][0].update(main="no_such_column"))()
+
+
+@case("R60", "joined_key", "a join column that is not in the joined file")
+def _():
+    return _with_joined_file(lambda s: s["data"]["joins"][0]["on"][0].update(joined="no_such_column"))()
+
+
+@case("R60", "clash", "a joined file with a column whose name is already in the main file")
+def _():
+    return _with_joined_file(lambda s: None, b"experiment_id;drug_pct\nE00001;1\n")()
+
+
+# ---- how values are cleaned (Stage 2c): composition, assumed units, a fixed hardness unit, below-detection
+@mutation("R64", "weight_not_mapped", "a total weight that no column is mapped to")
+def _(s):
+    s["data"]["composition"] = {"total_weight": "ghost_mg"}
+
+
+@mutation("R64", "suffix_mismatch", "a total-weight ID that does not end like the amounts")
+def _(s):
+    s["data"]["column_map"]["Weight"] = "tablet_weight_g"
+    s["data"]["composition"] = {"total_weight": "tablet_weight_g"}
+
+
+@mutation("R64", "no_amounts", "a composition rule with no mapped amount columns")
+def _(s):
+    s["data"]["column_map"]["Weight"] = "tablet_weight_mg"
+    s["data"]["composition"] = {"total_weight": "tablet_weight_mg"}
+
+
+@mutation("R65", "", "an assumed unit for a column that is not mapped")
+def _(s):
+    s["data"]["assumed_units"] = [{"id": "ghost_mg", "why": "unit assumed, not confirmed"}]
+
+
+@mutation("R66", "no_conversion", "a fixed hardness unit with no conversion")
+def _(s):
+    s["data"]["hardness"]["unit"] = "kg/cm2"
+
+
+@mutation("R66", "both", "hardness with both a unit column and a fixed unit")
+def _(s):
+    s["data"]["hardness"]["unit"] = "N"
+
+
+@mutation("R68", "", "a replicate grouping that names a column nothing produces")
+def _(s):
+    s["data"]["replicates"]["group_by"] = ["no_such_column"]
+
+
+@mutation("R67", "", "a below-detection note column with no limit")
+def _(s):
+    s["data"]["below_detection"].pop("limit")
+
+
+def _with_validation(s, **changes):
+    """A valid validation section for the example setup, with one thing changed."""
+    block = {"responses": ["dissolution_30min_pct", "hardness_kp"],
+             "groups": {"batch": {"column": "batch_id"}, "supplier": {"column": "binder_supplier", "confirmed": True}, "date": {"column": "date"}}}
+    block.update(changes)
+    s["data"]["validation"] = block
+
+
+@mutation("R69", "response", "a result to predict that no column produces")
+def _(s):
+    _with_validation(s, responses=["no_such_result"])
+
+
+@mutation("R69", "input", "an input that no column produces")
+def _(s):
+    _with_validation(s, inputs=["drug_pct", "no_such_input"])
+
+
+@mutation("R69", "derived", "a derived-from column that no column produces")
+def _(s):
+    _with_validation(s, derived_from={"hardness_kp": ["no_such_source"]})
+
+
+@mutation("R69", "group", "a group column that no column produces")
+def _(s):
+    _with_validation(s, groups={"batch": {"column": "no_such_batch"}})
+
+
+@mutation("R69", "left_out", "a left-out column that no column produces")
+def _(s):
+    _with_validation(s, left_out=[{"id": "no_such_column", "why": "not measured"}])
+
+
+@mutation("R73", "", "a left-out column that is also a result to predict")
+def _(s):
+    _with_validation(s, left_out=[{"id": "hardness_kp", "why": "not trusted"}])
+
+
+@mutation("R70", "", "a result to predict that is also an input")
+def _(s):
+    _with_validation(s, inputs=["drug_pct", "hardness_kp"])
+
+
+@mutation("R71", "", "a supplier column that does not say whether it is confirmed")
+def _(s):
+    _with_validation(s, groups={"supplier": {"column": "binder_supplier"}})
+
+
+@mutation("R72", "", "a column listed as calculated from itself")
+def _(s):
+    _with_validation(s, derived_from={"hardness_kp": ["hardness_kp"]})
+
+
 # ------------------------------------------------------------------ running the cases
 @dataclass
 class CaseResult:

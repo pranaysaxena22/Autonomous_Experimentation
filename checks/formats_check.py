@@ -36,6 +36,7 @@ PACKAGE = ROOT / "cellpoc" / "formats"
 SCHEMAS = PACKAGE / "schemas"                    # the schemas live in the package; docs keeps only a pointer
 EXAMPLES = PACKAGE / "examples"                  # master copies of the four files programs read at run time
 MASTER_COPIES = ["setup_example.yaml", "cell_layout_example.json", "experiments_example.csv", "experiments_example.meta.json"]
+EXTRA_EXAMPLE_SETUPS = ["setup_example_2_week_random_faults.yaml", "setup_example_3_demanding_targets.yaml"]       # the two further illustrative example setups the apps offer (added 2026-10-13 at the project owner's request)
 MOCK = ROOT / "data" / "mock"
 FILES = {"setup": "setup_example.yaml", "plan": "motion_plan_example.json", "executed": "executed_timeline_example.json",
          "layout": "cell_layout_example.json", "record": "run_record_v2_example.json",
@@ -553,7 +554,13 @@ def main() -> int:
     rec("K2", docs_schemas == ["MOVED.md"] and all((SCHEMAS / s).exists() for s in SCHEMA_FILES.values()),
         "The seven schemas live in the package and docs keeps only a pointer (MOVED.md)", f"package schemas: {len(SCHEMA_FILES)}; docs folder holds: {docs_schemas}")
     pkg_files = sorted(p.name for p in EXAMPLES.glob("*"))
-    rec("K3", pkg_files == sorted(MASTER_COPIES), "The package examples folder holds exactly the four runtime example files, nothing else", f"{pkg_files}")
+    rec("K3", pkg_files == sorted(MASTER_COPIES + EXTRA_EXAMPLE_SETUPS), "The package examples folder holds exactly the four runtime example files and the two further example setups, nothing else", f"{pkg_files}")
+    from cellpoc.setup import has_errors as _has_errors, load_setup as _load_setup, validate as _validate
+    extra = {n: _load_setup(EXAMPLES / n) for n in EXTRA_EXAMPLE_SETUPS}
+    extra_problems = {n: ([] if loaded.setup is None else _validate(loaded.setup, base_dir=EXAMPLES)) for n, loaded in extra.items()}
+    rec("K4", all(loaded.setup is not None and not _has_errors(extra_problems[n]) and loaded.setup["project"]["data_status"] == "illustrative" and loaded.setup["project"]["name"].startswith("Illustrative study") for n, loaded in extra.items())
+        and len({loaded.setup["project"]["name"] for loaded in extra.values()} | {S["project"]["name"]}) == 3,
+        "The two further example setups pass the platform's own setup checker with no errors, are marked illustrative, and each has its own name", "; ".join(f"{n}: {sum(p.level == 'warning' for p in extra_problems[n])} warning(s)" for n in extra))
 
     # ---------- G schemas
     rec("G1", Draft202012Validator is not None, "The schema library (jsonschema) works with this Python version and is installed", f"jsonschema {SCHEMA_LIB} on Python {sys.version.split()[0]}")

@@ -65,6 +65,8 @@ FIELD_WORDS = {
     "context_factors": "Context factors", "process_factors": "Process settings", "ingredients": "Ingredients",
     "recipe_rules": "Recipe rules", "experiment": "Experiment column", "replicate": "Replicate column", "batch": "Batch column",
     "date": "Date column", "status": "Status column", "failure_reason": "Failure reason column",
+    "validation": "Validation", "responses": "Results to predict", "inputs": "Inputs", "derived_from": "Calculated from",
+    "groups": "Groups held out", "left_out": "Left out of the modelling", "why": "Why", "supplier": "Supplier column", "api": "API column", "column": "Column", "confirmed": "Confirmed supplier",
 }
 
 

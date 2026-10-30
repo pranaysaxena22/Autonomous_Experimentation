@@ -19,6 +19,7 @@ class Unit:
 UNITS: tuple[Unit, ...] = (
     Unit("%", "share of the tablet or a percentage", "_pct", "percent"),
     Unit("g", "mass", "_g", "grams"),
+    Unit("mg", "mass", "_mg", "milligrams"),
     Unit("kN", "force", "_kn", "kilonewtons"),
     Unit("kP", "force", "_kp", "kilopond"),
     Unit("N", "force", "_n", "newtons"),

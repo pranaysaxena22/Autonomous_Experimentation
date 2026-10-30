@@ -8,6 +8,10 @@ runs/
 setups/
 data/client/
 
+# Public third-party datasets used only to test ingestion and models (licences and sources are in data/public/SOURCES.md)
+data/public/formulation_literature/
+data/public/batch_production/
+
 # Screenshots of the setup screens (made on demand, uploaded for review, not committed)
 docs/screenshots/
 
@@ -22,3 +26,11 @@ __pycache__/
 .vscode/
 .DS_Store
 Thumbs.db
+# A public dataset for training the vision model (MIT licence, about 3 GB) and the model's own weights: downloaded and trained by tools\train_vision.py, never committed
+data/public/labpics/
+data/public/pharmavision/
+data/vision_models/
+
+# the offline voice maker's own environment and its voice files (large, downloaded, not part of the project)
+.venv_voice/
+voice_models/

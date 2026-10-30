@@ -1,0 +1,5 @@
+Pictures in this folder are only examples for the Vision page's sample list. Drop your own JPG or PNG photos of coloured liquids here and they appear in the list.
+
+Rendered_test_tube.jpg: 'Test tube' by M4D GROUP (Media 4D Ltd.), a 3D rendering (not a photograph), resized to 1000 pixels wide by the Wikimedia Commons thumbnail service.
+Source: https://commons.wikimedia.org/wiki/File:Test_tube.jpg (originally https://www.flickr.com/photos/m4dgroup/6001641162)
+Licence: Creative Commons Attribution 2.0 Generic (CC BY 2.0), https://creativecommons.org/licenses/by/2.0 . Used unchanged.

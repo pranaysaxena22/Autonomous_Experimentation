@@ -79,5 +79,16 @@
   "snapshots": {"unchanged_from_poc": true, "note": "one display-ready snapshot per moment, as today; each will also name the motion-plan action in progress"},
   "comparison": {"unchanged_from_poc": true, "note": "the same strategy comparison as today's record"},
   "comparison_with_faults": {"unchanged_from_poc": true, "note": "the same comparison with the scripted faults applied"},
-  "about": {"unchanged_from_poc": true, "note": "the same shows / does-not-show text, plus a new 'data and model' section"}
+  "about": {"unchanged_from_poc": true, "note": "the same shows / does-not-show text, plus a new 'data and model' section"},
+  "platform": {
+    "label": "SYNTHETIC platform run: a simulation, not a result about real tablets.",
+    "setup_name": "Illustrative tablet study",
+    "executor": "python_stand_in",
+    "replay_file": "replay.html",
+    "pipeline": ["Setup, layout, decision engine, motion planner, executor, virtual lab and cell simulator, one line each (shortened here)."],
+    "trial_rows": ["Trial 1: 49 actions planned, 49 run (0 recovery), 123 minutes; result: Good (shortened example line)."],
+    "data_lines": ["Data quality report [SYNTHETIC DATA]: experiments_example.csv", "ROW ACCOUNTING: 12 rows read -> 12 rows in the table"],
+    "model_lines": ["Modelling table for the setup's data file [SYNTHETIC DATA].", "These models are checked on held-out data in the scorecards."],
+    "limits": ["This is a simulation, not a prediction about real tablets."]
+  }
 }

@@ -4,3 +4,11 @@
 *.json  text eol=lf
 *.yaml  text eol=lf
 *.yml   text eol=lf
+
+# The sealed acceptance lab keeps Unix line endings so its fingerprints never change with a checkout.
+acceptance/** text eol=lf
+
+# The 3D viewer's bundled library must never be changed by a checkout (its fingerprint is checked); the viewer's own files keep Unix line endings.
+cellpoc/viewer/vendor/three.min.js -text
+cellpoc/viewer/*.js text eol=lf
+cellpoc/viewer/*.html text eol=lf

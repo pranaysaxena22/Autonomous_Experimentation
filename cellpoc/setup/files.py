@@ -149,3 +149,14 @@ def list_layouts(root: Path = PROJECT_ROOT) -> list[Path]:
 
 def example_setup_path() -> Path:
     return PACKAGE_EXAMPLES / "setup_example.yaml"
+
+
+# The illustrative example setups the apps offer (all use the same equipment layout and example experiment table, so each loads, checks, simulates and runs live). The first is the example every check uses.
+EXAMPLE_SETUPS = (("setup_example.yaml", "Example 1: a standard five-day run with two scripted jams"),
+                  ("setup_example_2_week_random_faults.yaml", "Example 2: a week with random faults"),
+                  ("setup_example_3_demanding_targets.yaml", "Example 3: demanding targets, a short run"))
+
+
+def example_choices() -> list[tuple[str, Path]]:
+    """(label, file) for each illustrative example setup that is on this computer, the standard one first."""
+    return [(label, PACKAGE_EXAMPLES / name) for name, label in EXAMPLE_SETUPS if (PACKAGE_EXAMPLES / name).is_file()]

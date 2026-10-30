@@ -111,6 +111,10 @@ data:
   meta_file: "experiments_example.meta.json"
   encoding: "utf-8"                  # a leading byte-order mark (BOM) is accepted
   line_endings: any                  # Windows (CRLF) and Unix (LF) endings are both accepted
+  delimiter: auto                    # auto | comma | semicolon | tab: what separates the columns
+  decimal: auto                      # auto | point | comma: 12.5 or 12,5
+  missing_markers: ["NA"]            # text that means "no value" (an empty cell always does)
+  date: { format: "yyyy-mm-dd", language: en }   # pieces yyyy yy mm dd mon month; e.g. "mon.yy" for nov.18
   id_columns: { experiment: experiment_id, replicate: replicate_no, batch: batch_id, date: date, status: status, failure_reason: failure_reason }
   column_map:                        # raw column in the client's file -> platform id
     drug_pct: drug_pct

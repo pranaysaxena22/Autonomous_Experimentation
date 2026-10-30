@@ -1,0 +1,40 @@
+# INGESTION FIXTURE (not a full setup): it describes how to read one real PUBLIC dataset so the data reader can be tested on it.
+# Process.csv: features extracted from each batch's process sensors, one row per batch; '#N/A' means no value.
+# Real third-party data, used only to test ingestion and models; never presented as client data. Source, DOI and licence: data/public/SOURCES.md
+# The data file itself is not in git (data/public/ is git-ignored); this file only says how to read it.
+context_factors:
+- id: product_code
+  label: Product code
+  values: []
+- id: weekend
+  label: Made at a weekend
+  values: []
+data:
+  experiments_file: data/public/batch_production/Process.csv
+  delimiter: semicolon
+  decimal: point
+  missing_markers:
+  - '#N/A'
+  id_columns:
+    experiment: batch
+    batch: batch
+  column_map:
+    code: product_code
+    weekend: weekend
+    tbl_speed_mean: tbl_speed_mean
+    tbl_speed_change: tbl_speed_change
+    total_waste: total_waste
+    startup_waste: startup_waste
+    main_CompForce mean: main_compforce_mean
+    Drug release average (%): drug_release_average
+    Drug release min (%): drug_release_min
+    Residual solvent: residual_solvent
+    Total impurities: total_impurities
+    Impurity O: impurity_o
+    Impurity L: impurity_l
+  provenance:
+    data_status: real
+    label: 'REAL PUBLIC DATA, NOT CLIENT DATA: tablet production batches (Zagar and Mihelic, Scientific Data 9:99, 2022; CC BY 4.0). Used only
+      to test ingestion and models.'
+    source: data/public/SOURCES.md (DOI 10.6084/m9.figshare.c.5645578)
+    contains_real_client_data: false

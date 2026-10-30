@@ -14,7 +14,27 @@ blueColor = "#00A3E0"
 redColor = "#DA291C"
 orangeColor = "#E8A317"
 chartCategoricalColors = ["#86BC25", "#00A3E0", "#282728", "#86EB22", "#A0DCFF", "#005587", "#B7E320", "#63C631"]
-font = "sans-serif"
+font = "Open Sans"
+headingFont = "Open Sans"
+headingFontWeights = [700, 700, 700, 700, 700, 700]
+baseRadius = "8px"
+buttonRadius = "6px"
+
+# The bundled Open Sans file (static/OpenSans.ttf, served offline by enableStaticServing below), so buttons, menus and tables use the brand font too.
+[[theme.fontFaces]]
+family = "Open Sans"
+url = "app/static/OpenSans.ttf"
+weight = 400
+
+[[theme.fontFaces]]
+family = "Open Sans"
+url = "app/static/OpenSans.ttf"
+weight = 600
+
+[[theme.fontFaces]]
+family = "Open Sans"
+url = "app/static/OpenSans.ttf"
+weight = 700
 
 [client]
 toolbarMode = "minimal"
@@ -24,4 +44,3 @@ gatherUsageStats = false
 
 [server]
 enableStaticServing = true
-port = 8504

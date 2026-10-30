@@ -1,0 +1,170 @@
+# INGESTION FIXTURE (not a full setup): it describes how to read one real PUBLIC dataset so the data reader can be tested on it.
+# final Data All Exipients.csv: 1,982 formulations from published articles; amounts are in mg, hardness is in kg/cm2; no ids, dates or batches.
+# Real third-party data, used only to test ingestion and models; never presented as client data. Source, DOI and licence: data/public/SOURCES.md
+# The data file itself is not in git (data/public/ is git-ignored); this file only says how to read it.
+targets:
+  constraints:
+  - response: disintegration_time_s
+    label: Disintegration time
+    unit: s
+    goal: at_most
+    value: 60
+    required: false
+  objectives: []
+data:
+  experiments_file: data/public/formulation_literature/final Data All Exipients.csv
+  delimiter: comma
+  decimal: point
+  id_columns: {}
+  column_map:
+    DOSE: drug_mg
+    Weight(mg): tablet_weight_mg
+    Microcrystalline Cellulose: microcrystalline_cellulose_mg
+    Mannitol: mannitol_mg
+    Magnesium Stearate: magnesium_stearate_mg
+    Talc: talc_mg
+    Sodium croscarmellose: sodium_croscarmellose_mg
+    Aspartame: aspartame_mg
+    Hydroxypropyl Cellulose (HPC): hydroxypropyl_cellulose_hpc_mg
+    Gum: gum_mg
+    Chitosan: chitosan_mg
+    Sodium saccharin: sodium_saccharin_mg
+    Sodium lauryl sulfate(SLS): sodium_lauryl_sulfate_sls_mg
+    Sodium stearyl fumarate: sodium_stearyl_fumarate_mg
+    Polyvinylpyrrolidone (Crospovidone): polyvinylpyrrolidone_crospovidone_mg
+    Sodium starch glycolate: sodium_starch_glycolate_mg
+    polyvinyl acetate: polyvinyl_acetate_mg
+    Lactose: lactose_mg
+    Colloidal silicon dioxide (Aerosil): colloidal_silicon_dioxide_aerosil_mg
+    Citric acid: citric_acid_mg
+    Menthol: menthol_mg
+    B-cyclodextrin: b_cyclodextrin_mg
+    Stevia leaf Powder: stevia_leaf_powder_mg
+    Clove oil: clove_oil_mg
+    Starch: starch_mg
+    sodium bicarbonate (NaHCO3): sodium_bicarbonate_nahco3_mg
+    Plantago ovata: plantago_ovata_mg
+    Pharmaburst: pharmaburst_mg
+    parteck: parteck_mg
+    Polyethylene Glycol: polyethylene_glycol_mg
+    Eudragit EPO: eudragit_epo_mg
+    Precirol: precirol_mg
+    acesulfame potassium: acesulfame_potassium_mg
+    Polacrilin Potassium: polacrilin_potassium_mg
+    Acryflow-L: acryflow_l_mg
+    Indion: indion_mg
+    Lubritose: lubritose_mg
+    Sucralose: sucralose_mg
+    Silicon dioxide: silicon_dioxide_mg
+    Neotame: neotame_mg
+    Sucrose: sucrose_mg
+    Ocimum sanctum seed powder: ocimum_sanctum_seed_powder_mg
+    Agar: agar_mg
+    Calcium carbonate: calcium_carbonate_mg
+    Sodium Saccharine: sodium_saccharine_mg
+    Prosolv ODT: prosolv_odt_mg
+    Cellactose: cellactose_mg
+    Quinoline yellow lake: quinoline_yellow_lake_mg
+    Aerosol: aerosol_mg
+    Sodium behenate: sodium_behenate_mg
+    dibasic calcium phosphate: dibasic_calcium_phosphate_mg
+    Mucilage powder: mucilage_powder_mg
+    GNSP: gnsp_mg
+    Ludipress: ludipress_mg
+    Kaolin: kaolin_mg
+    Methyl paraben: methyl_paraben_mg
+    Camphor: camphor_mg
+    CPE: cpe_mg
+    FRIABILITY: friability_pct
+    Drug content: drug_content_pct
+    Water absorption ratio: water_absorption_pct
+    DISINTEGRATION_TIME: disintegration_time_s
+    Wetting time: wetting_time_s
+  column_units:
+    microcrystalline_cellulose_mg: mg
+    mannitol_mg: mg
+    magnesium_stearate_mg: mg
+    talc_mg: mg
+    sodium_croscarmellose_mg: mg
+    aspartame_mg: mg
+    hydroxypropyl_cellulose_hpc_mg: mg
+    gum_mg: mg
+    chitosan_mg: mg
+    sodium_saccharin_mg: mg
+    sodium_lauryl_sulfate_sls_mg: mg
+    sodium_stearyl_fumarate_mg: mg
+    polyvinylpyrrolidone_crospovidone_mg: mg
+    sodium_starch_glycolate_mg: mg
+    polyvinyl_acetate_mg: mg
+    lactose_mg: mg
+    colloidal_silicon_dioxide_aerosil_mg: mg
+    citric_acid_mg: mg
+    menthol_mg: mg
+    b_cyclodextrin_mg: mg
+    stevia_leaf_powder_mg: mg
+    clove_oil_mg: mg
+    starch_mg: mg
+    sodium_bicarbonate_nahco3_mg: mg
+    plantago_ovata_mg: mg
+    pharmaburst_mg: mg
+    parteck_mg: mg
+    polyethylene_glycol_mg: mg
+    eudragit_epo_mg: mg
+    precirol_mg: mg
+    acesulfame_potassium_mg: mg
+    polacrilin_potassium_mg: mg
+    acryflow_l_mg: mg
+    indion_mg: mg
+    lubritose_mg: mg
+    sucralose_mg: mg
+    silicon_dioxide_mg: mg
+    neotame_mg: mg
+    sucrose_mg: mg
+    ocimum_sanctum_seed_powder_mg: mg
+    agar_mg: mg
+    calcium_carbonate_mg: mg
+    sodium_saccharine_mg: mg
+    prosolv_odt_mg: mg
+    cellactose_mg: mg
+    quinoline_yellow_lake_mg: mg
+    aerosol_mg: mg
+    sodium_behenate_mg: mg
+    dibasic_calcium_phosphate_mg: mg
+    mucilage_powder_mg: mg
+    gnsp_mg: mg
+    ludipress_mg: mg
+    kaolin_mg: mg
+    methyl_paraben_mg: mg
+    camphor_mg: mg
+    cpe_mg: mg
+    drug_mg: mg
+    tablet_weight_mg: mg
+    friability_pct: '%'
+    drug_content_pct: '%'
+    water_absorption_pct: '%'
+    disintegration_time_s: s
+    wetting_time_s: s
+  assumed_units:
+  - id: sodium_saccharine_mg
+    why: unit assumed, not confirmed by the dataset's dictionary
+  composition:
+    total_weight: tablet_weight_mg
+    amount_suffix: _mg
+    tolerance_pct: 2
+  hardness:
+    value_column: HARDNESS
+    unit: kg/cm2
+    to: hardness_kp
+    conversions:
+      kg/cm2:
+        divide_by: 1
+        status: assumed
+        note: the dataset's dictionary gives hardness in kg/cm2; taken as kilopond (a kilogram of force), a common convention but not exact
+      kP:
+        divide_by: 1
+  provenance:
+    data_status: real
+    label: 'REAL PUBLIC DATA, NOT CLIENT DATA: fast-disintegrating tablet formulations from published articles (Momeni, Harvard Dataverse; CC0).
+      Used only to test ingestion and models.'
+    source: data/public/SOURCES.md (DOI 10.7910/DVN/TUSJYB)
+    contains_real_client_data: false
