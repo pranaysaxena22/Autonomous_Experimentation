@@ -291,6 +291,56 @@ ul.log li{padding:6px 0;border-bottom:1px solid var(--line);font-size:.8rem}ul.l
 
 @media (max-width:1180px){.top{flex-wrap:wrap}.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.ctx{grid-template-columns:repeat(2,minmax(0,1fr))}.hero{grid-template-columns:minmax(0,1fr)}.two,.gridmain,.grid2,.grid3,.alerts3,.look,.duo,.pan2{grid-template-columns:minmax(0,1fr)}.trio{grid-template-columns:minmax(0,1fr)}.bs{display:none}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* how the engine chose this recipe (Operator view) */
+.rs-top{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:12px}
+.rs-mode{font-size:.72rem;font-weight:800;letter-spacing:.08em;border-radius:999px;padding:3px 12px;border:2px solid var(--line2);color:var(--muted)}
+.rs-mode.refining{border-color:var(--green);color:var(--tok);background:rgba(134,188,37,.18)}
+.rs-mode.exploring{border-color:var(--blue);color:var(--tlook);background:rgba(0,163,224,.12)}
+.rs-tile{border:1px solid var(--line);border-top:4px solid var(--green);border-radius:12px;padding:8px 14px 10px;background:var(--t1)}
+.rs-tile .s{color:var(--muted);font-size:.78rem;margin-top:6px}.rs-tile .w{margin-top:6px;font-size:.88rem;color:var(--white)}
+.rs-tile .k{font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.rs-tile .v{font-size:1.6rem;font-weight:700;color:var(--white);font-variant-numeric:tabular-nums;line-height:1.2}
+.rs-tile .t{height:8px;border-radius:999px;background:var(--t2);overflow:hidden;margin-top:4px}.rs-tile .t i{display:block;height:100%;background:var(--green)}
+.rs-cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:12px}
+.rs-cols h5{margin:0 0 6px;font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.rs-cols p,.rs-cols li{margin:0 0 6px;font-size:.88rem}
+.rs-cols ul{margin:0;padding-left:18px}
+.rs-cols b{color:var(--white)}
+.rs-note{margin:12px 0 0;color:var(--muted);font-size:.78rem}
+.rs-more{margin-top:8px;font-size:.8rem;color:var(--muted)}.rs-more p{margin:6px 0 0}
+@media (max-width:1180px){.rs-cols{grid-template-columns:minmax(0,1fr)}}
+
+/* high-risk findings wait for a person (Operator view card, Lab manager log) */
+.gate{margin-bottom:14px}.gate:empty{display:none}
+.gate-card{border:2px solid var(--red);border-radius:18px;background:rgba(218,41,28,.07);padding:14px 18px}
+.gate-head{display:flex;flex-wrap:wrap;align-items:center;gap:10px}.gate-head b{font-size:1.05rem;color:var(--white)}.gate-head small{color:var(--muted);margin-left:auto}
+.risk{font-size:.7rem;font-weight:800;letter-spacing:.08em;border-radius:999px;padding:2px 12px;border:2px solid var(--red);color:var(--tbad)}
+.gate-card p{margin:8px 0 0;font-size:.9rem}.gate-card p b{color:var(--white)}
+.gate-btns{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}
+.gate-btns button{font:inherit;font-weight:700;border-radius:12px;padding:10px 22px;cursor:pointer;background:var(--panel);color:var(--white);border:2px solid var(--line2)}
+.gate-btns .accept{border-color:var(--green)}.gate-btns .accept:hover{background:var(--green);color:#000}
+.gate-btns .reject{border-color:var(--red)}.gate-btns .reject:hover{background:var(--red);color:#fff}
+.gate-card .gate-note{color:var(--muted);font-size:.78rem}
+
+/* the job queue (Jobs view) */
+.jobrow{display:grid;grid-template-columns:minmax(0,1.6fr) 130px minmax(0,1.6fr) 130px;gap:10px;align-items:center;padding:10px 4px;border-bottom:1px solid var(--line)}
+.jobrow .jn small{display:block;color:var(--muted);font-size:.78rem}
+.jobrow .jpr{font-size:.85rem;color:var(--muted)}
+.jobrow .jact{text-align:right}
+.jwhy{grid-column:1 / -1;padding:8px 12px;border-left:4px solid var(--red);background:rgba(218,41,28,.07);border-radius:8px;font-size:.88rem}
+.jobbtns{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+.jobbtns button[hidden]{display:none}
+.jst .tag{white-space:nowrap}
+.shelfbar{display:grid;grid-template-columns:130px minmax(0,1fr) 80px;gap:10px;align-items:center;font-size:.85rem;margin:6px 0}
+.shelfbar .t{height:10px;border-radius:999px;background:var(--t2);overflow:hidden}.shelfbar .t i{display:block;height:100%}
+@media (max-width:760px){.jobrow{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.shelfbar{grid-template-columns:100px minmax(0,1fr) 70px}}
+
+/* try a recipe yourself (Try it view) */
+.tryform{display:grid;gap:8px;max-width:560px;margin:10px 0}
+.tryrow{display:grid;grid-template-columns:150px 110px minmax(0,1fr);gap:10px;align-items:center}
+.tryrow input{font:inherit;padding:6px 8px;border:1px solid var(--line2);border-radius:8px;background:var(--panel);color:var(--white);width:100%;box-sizing:border-box}
+.tryrow small{color:var(--muted)}
 </style>
 </head>
 <body>
@@ -301,6 +351,8 @@ ul.log li{padding:6px 0;border-bottom:1px solid var(--line);font-size:.8rem}ul.l
     <button role="tab" data-tab="overview" class="on">Overview</button>
     <button role="tab" data-tab="operator">Operator</button>
     <button role="tab" data-tab="manager">Lab manager<span class="badge" id="mgrBadge"></span></button>
+    <button role="tab" data-tab="jobs">Jobs<span class="badge" id="jobsBadge"></span></button>
+    <button role="tab" data-tab="try">Try it</button>
   </nav>
   <div class="tools">
     <span class="chip illus">ILLUSTRATIVE</span>
@@ -387,6 +439,7 @@ ul.log li{padding:6px 0;border-bottom:1px solid var(--line);font-size:.8rem}ul.l
 
 <!-- ====================================================== OPERATOR -->
 <section id="view-operator" class="view" aria-label="Operator">
+  <div class="gate" id="gate" aria-live="assertive"></div>
   <div class="gridmain">
     <div class="panel" id="pCell">
       <div class="ph"><span>Cell view</span><small>The simulated cell, as it publishes each moment</small></div>
@@ -407,6 +460,7 @@ ul.log li{padding:6px 0;border-bottom:1px solid var(--line);font-size:.8rem}ul.l
       <p class="cap" id="camNote">Every ingredient bottle is identified by its barcode and printed name, and its liquid is checked. Every pressed tablet is inspected.</p>
     </div>
   </div>
+  <div class="panel" id="pReason" style="margin-top:14px"><div class="ph"><span>How the engine chose this recipe</span><small id="reasonMeta">Waiting for the first decision</small></div><div class="pb" id="reasonBody"><p class="empty">When the engine chooses a recipe, the reasoning behind the choice appears here.</p></div></div>
   <div class="grid2">
     <div class="panel" id="pChecks"><div class="ph"><span>Camera checks so far</span><small id="checksCount">none yet</small></div><div class="list" id="checksList"></div></div>
     <div class="panel" id="pLook"><div class="ph"><span>Closer look</span><small id="lookMeta">Choose a check on the left</small></div><div id="lookBody"><p class="empty" style="padding:14px">The photograph, the readings and what the cell does next appear here.</p></div></div>
@@ -430,7 +484,26 @@ ul.log li{padding:6px 0;border-bottom:1px solid var(--line);font-size:.8rem}ul.l
     <div class="panel" id="pResults"><div class="ph"><span>Results</span><small>Latest first, as each test finishes</small></div><div class="tscroll" id="results"></div></div>
     <div class="panel" id="pAlertLog"><div class="ph"><span>Faults and alerts</span><small>Shown at the moment they strike</small></div><ul class="log" id="alerts"></ul></div>
   </div>
+  <div class="panel" id="pDecisions" style="margin-top:14px"><div class="ph"><span>Decisions log</span><small>High-risk findings that needed a person</small></div><div class="pb" id="decisions"></div></div>
   <div class="panel" id="pEvents" style="margin-top:14px"><div class="ph"><span>What is happening</span><small>Latest first</small></div><ul class="log" id="events"></ul></div>
+</section>
+<section id="view-jobs" class="view" aria-label="Jobs">
+  <div class="panel" id="pJobs"><div class="ph"><span>Job queue</span><small id="jobsMeta">Nothing is running</small></div>
+    <div class="pb">
+      <div class="jobbtns"><button class="ghost" id="jobsRunAll">Run the whole queue</button><button class="ghost" id="jobsStopAuto" hidden>Stop running by itself</button><button class="ghost" id="jobsRestock">Restock the shelf</button><button class="ghost" id="jobsReset">Reset the queue</button></div>
+      <div id="jobsBody"><p class="empty">Waiting for the first update.</p></div>
+      <p class="empty">Illustrative: the jobs, the amounts on the shelf and the order are made up. The cell does one job at a time, and jobs run first come, first served until the real scheduling rules are written down.</p>
+    </div></div>
+  <div class="panel" id="pShelf" style="margin-top:14px"><div class="ph"><span>Ingredients on the shelf</span><small>Made-up amounts, in grams</small></div><div class="pb" id="shelfBody"></div></div>
+</section>
+<section id="view-try" class="view" aria-label="Try it">
+  <div class="panel" id="pTry"><div class="ph"><span>Try a recipe yourself</span><small>Illustrative: the lab and the engine are simulations</small></div>
+    <div class="pb">
+      <p class="empty" id="tryTargets">Waiting for the first update.</p>
+      <div class="tryform" id="tryForm"></div>
+      <div class="jobbtns"><button class="ghost" id="tryGo">Measure this recipe</button></div>
+      <div id="tryOut"></div>
+    </div></div>
 </section>
 </main>
 

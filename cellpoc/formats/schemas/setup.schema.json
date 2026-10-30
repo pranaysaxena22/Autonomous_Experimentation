@@ -120,9 +120,10 @@
         "recovery": {"type": "object", "additionalProperties": false, "required": ["tap_shake_s", "max_retries"],
                      "properties": {"tap_shake_s": {"type": "number", "minimum": 0}, "max_retries": {"type": "integer", "minimum": 0}}},
         "scripted": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["trial", "where", "cause", "retry_succeeds"],
-                     "properties": {"trial": {"type": "integer", "minimum": 1}, "where": {"$ref": "#/$defs/where"}, "cause": {"type": "string", "minLength": 1}, "retry_succeeds": {"type": "boolean"}}}},
+                     "properties": {"trial": {"type": "integer", "minimum": 1}, "where": {"$ref": "#/$defs/where"}, "cause": {"type": "string", "minLength": 1}, "retry_succeeds": {"type": "boolean"},
+                                    "risk": {"type": "string", "enum": ["low", "high"], "description": "high: a person must accept or reject it before the cell goes on (a wrong vial at the barcode scan only); low or absent: the cell handles it alone"}}}},
         "random": {"type": "array", "items": {"type": "object", "additionalProperties": false, "required": ["where", "cause", "chance_per_trial", "retry_succeeds_chance"],
-                   "properties": {"where": {"$ref": "#/$defs/where"}, "cause": {"type": "string", "minLength": 1},
+                   "properties": {"where": {"$ref": "#/$defs/where"}, "cause": {"type": "string", "minLength": 1}, "risk": {"type": "string", "enum": ["low", "high"]},
                                   "chance_per_trial": {"type": "number", "minimum": 0, "maximum": 1, "description": "a probability from 0 to 1; used only for random faults"},
                                   "retry_succeeds_chance": {"type": "number", "minimum": 0, "maximum": 1, "description": "a probability from 0 to 1; used only for random faults"}}}}
       }

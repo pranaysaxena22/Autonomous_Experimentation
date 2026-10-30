@@ -35,8 +35,10 @@ from checks.common import Checklist  # noqa: E402
 from checks.models_check import project_files  # noqa: E402
 
 # Recorded on 2026-10-14 from the code BEFORE the instruments part existed: for each example, the number of trials and a fingerprint of every plan and executed timeline.
-GOLDEN = {"Example 1": [30, "24cd0a2022cd1aca2e94362319478ad01686a9ac1a2c1382f52cbb71b4bf8171"], "Example 2": [42, "a78c8477d96b27cffc4a7c66502a3880de683b87dccd2d3e4a14d01d773c7f21"],
-          "Example 3": [24, "8cdbc3ac065209baa19526ea3cd68be0d163ef67a6146d8ef870962cbc74fb6f"]}
+# Re-recorded on 2026-10-30 after the engine's reason sentence was corrected (the plans carry that sentence as their 'why'): with the sentence left out, every plan and executed timeline of all three examples
+# is byte for byte what it was on 2026-10-14 (checked), so only the wording changed. The numbers recorded on 2026-10-14 were Example 1 24cd0a20..., Example 2 a78c8477..., Example 3 8cdbc3ac...
+GOLDEN = {"Example 1": [30, "deabe6a8fa699973ca368857dbe6a940b0f8438e772d7c910e79b7dfe59cc893"], "Example 2": [42, "c6d7daa4e2710b4c7b8e049a5fe689b122231d2def90d407418ad731767f5372"],
+          "Example 3": [24, "e96686ebe78e4b7c0d2a8e603cd172935755271492e0d27b2bad48cfd6b500c2"]}
 
 
 def fingerprint(run) -> str:

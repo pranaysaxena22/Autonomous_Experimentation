@@ -14,7 +14,8 @@ setTheme(Q.get('theme') === 'dark' || Q.get('theme') === 'light' ? Q.get('theme'
 const META = n => { const m = document.querySelector('meta[name="' + n + '"]'); return m ? m.content : ''; };
 const TOKEN = META('live-token');                                       // the secret this page's own server wrote into it: a control without it (or from another site) is refused by the server
 const TL = DATA.timelines;                                              // grows as the simulation publishes each trial
-const S = { s: 0, at: performance.now(), speed: 300, status: 'ready', when: '', duration: 0, results: [], alerts: [], events: [], eventTotal: 0, saved: null, message: '', summary: null, setupId: null, setupLabel: '', setupsKey: '', layoutId: null };
+const S = { s: 0, at: performance.now(), speed: 300, status: 'ready', when: '', duration: 0, results: [], alerts: [], events: [], eventTotal: 0, saved: null, message: '', summary: null, setupId: null, setupLabel: '', setupsKey: '', layoutId: null, approval: null, decisions: [], replacedTotal: 0, queue: null, epoch: '', design: null, whatif: null };
+let gateSig = '', queueSig = '', designSig = '';
 let lastUi = '', lastChips = '', lastAct = '', lastPhase = '', TAB = 'overview', ARMKIND = '';
 const mmss = s => { s = Math.round(s); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 const hhmm = s => { s = Math.round(s / 60); return Math.floor(s / 60) + ' h ' + String(s % 60).padStart(2, '0') + ' min'; };
@@ -47,7 +48,9 @@ const NOSHOW = [
 ];
 const EXPLAIN = {
   overview: ['Overview', 'This view is for leadership and clients. The top says what the product is; the challenge and the solution say why it matters. The six tiles count what the simulated cell has done so far, as it happens. Needs attention lists faults and alerts, Trial status colours each trial once its result is published, and the loop at the bottom lights the phase the cell is in right now. Every number is illustrative.'],
-  operator: ['Operator', 'This view is for the person watching the cell. The picture is the cell as the simulation publishes each moment, and the five steps show where the current trial is. When the arm lifts an ingredient bottle the camera scans its barcode, reads its printed name and looks at the liquid; a pressed tablet is inspected the same way. A green frame means right, red means wrong, amber means please check. Inject event arms a wrong bottle or a defective tablet for the next pick, so you can see how the cell reacts.'],
+  operator: ['Operator', 'This view is for the person watching the cell. The picture is the cell as the simulation publishes each moment, and the five steps show where the current trial is. When the arm lifts an ingredient bottle the camera scans its barcode, reads its printed name and looks at the liquid; a pressed tablet is inspected the same way. A green frame means right, red means wrong, amber means please check. Inject event arms a wrong bottle or a defective tablet for the next pick, so you can see how the cell reacts. The panel "How the engine chose this recipe" shows the reasoning behind the latest decision of the engine: how likely it thinks the recipe is to pass, what it expects to measure and how unsure it is, and which earlier results it is reacting to. Some findings are high risk: if the cell finds a vial that is not the one the plan expects, the run stops and a red card asks a person to accept or reject it. Rejecting skips that batch and the cell moves on by itself. Faults the cell can fix alone are tagged low risk and carry on.'],
+  try: ['Try it', 'This view lets you try your own recipe. Type a value for each ingredient, within the ranges shown, and press the button. The virtual lab measures the recipe, says whether it meets both specifications, and the engine says what it would try next and why. The engine has already seen the usual six starting recipes, and sees yours as the next trial. Everything is illustrative: the lab and the engine are simulations.'],
+  jobs: ['Jobs', 'This view is for the person who plans the work. It lists the jobs for several drugs, each one a whole run, and says where each one stands: pending, in progress, completed or blocked. Start one job, or run the whole queue and it works through them by itself, one at a time. A job that runs out of an ingredient stops and is marked blocked, with the reason, and the queue moves on to the next. The shelf shows how much of each ingredient is left, and Restock fills it again. The order is first come, first served for now, and the shelf is a made-up one.'],
   manager: ['Lab manager', 'This view is for the person who runs the lab. It shows what needs a person, every result as its test finishes, how the results develop over the run, and the log of faults, alerts and events. A person is asked only when the cell cannot carry on alone.'],
 };
 const PIPE = [['dispense', 'Dispense'], ['mix', 'Mix'], ['press', 'Press'], ['test', 'Test'], ['clean', 'Clean']];
@@ -59,13 +62,25 @@ function post(cmd, value) {
   return fetch('control', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Live-Token': TOKEN }, body: JSON.stringify({ cmd: cmd, value: value }) }).then(r => r.json()).then(d => { applyState(d); return d; }).catch(() => { toast('Could not reach the live view'); });
 }
 function applyState(d) {
-  if (!d || d.error) { if (d && d.error) toast(d.error); return; }
+  if (!d || d.error) { if (d && d.error) toast(d.error); tryDone(); return; }
+  if (d.whatif) { S.whatif = d.whatif; renderTry(); return; }                    // the answer to a recipe typed on the Try it view
+  if (d.epoch !== undefined) {                                           // a different run than the page was showing (the next job of the queue began): start the page over from this run's beginning
+    const changed = S.epoch && d.epoch !== S.epoch;
+    S.epoch = d.epoch;
+    if (changed) { resetLocal(); return; }
+  }
   if (d.timelines) d.timelines.forEach(t => TL.push(t));
   if (d.event_total !== undefined) {
     if (d.event_total < S.eventTotal) { S.events = []; }                  // a restart: the feed began again
     S.events = S.events.concat(d.events).slice(-200); S.eventTotal = d.event_total;
   }
-  Object.assign(S, { s: d.sim_s, at: performance.now(), speed: d.speed, status: d.status, when: d.clock_when, duration: d.duration_s, results: d.results, alerts: d.alerts, saved: d.saved, message: d.message, summary: d.summary || null });
+  if (d.replaced) d.replaced.forEach(t => { const i = TL.findIndex(x => x.trial === t.trial); if (i >= 0) TL[i] = t; });                       // an accepted vial changes how a trial that was already published goes on
+  if (d.replaced_total !== undefined) S.replacedTotal = d.replaced_total;
+  Object.assign(S, { s: d.sim_s, at: performance.now(), speed: d.speed, status: d.status, when: d.clock_when, duration: d.duration_s, results: d.results, alerts: d.alerts, saved: d.saved, message: d.message, summary: d.summary || null,
+    approval: d.approval === undefined ? S.approval : d.approval, decisions: d.decisions || S.decisions });
+  gateChanged();
+  if (d.jobs) { const sig = JSON.stringify(d.jobs); if (sig !== queueSig) { queueSig = sig; S.queue = d.jobs; lastUi = ''; } }
+  if (d.design) { const sig = JSON.stringify(d.design); if (sig !== designSig) { designSig = sig; S.design = d.design; S.whatif = null; renderTryForm(); renderTry(); } }
   if (d.setups) showSetups(d);
 }
 function showSetups(d) {
@@ -76,11 +91,11 @@ function showSetups(d) {
   sel.value = d.setup_id;
 }
 function poll() {
-  fetch('state?tl=' + TL.length + '&ev=' + S.eventTotal, { cache: 'no-store' }).then(r => r.json()).then(applyState)
+  fetch('state?tl=' + TL.length + '&ev=' + S.eventTotal + '&rp=' + S.replacedTotal, { cache: 'no-store' }).then(r => r.json()).then(applyState)
     .catch(() => { toast('Lost the connection to the live view. Please close this page and open it again.'); })
     .then(() => setTimeout(poll, 400));
 }
-function resetLocal() { visionReset(); MJ.key = ''; TL.length = 0; Object.assign(S, { s: 0, status: 'ready', events: [], eventTotal: 0, results: [], alerts: [], saved: null, summary: null, when: '', message: '' }); lastUi = ''; lastChips = ''; lastAct = ''; }
+function resetLocal() { visionReset(); MJ.key = ''; TL.length = 0; Object.assign(S, { s: 0, status: 'ready', events: [], eventTotal: 0, results: [], alerts: [], saved: null, summary: null, when: '', message: '', approval: null, decisions: [], replacedTotal: 0 }); gateSig = ''; renderGate(); lastUi = ''; lastChips = ''; lastAct = ''; }
 
 // ---------------------------------------------------------------- small helpers
 function toast(text) {
@@ -90,7 +105,7 @@ function toast(text) {
 function setTab(name) {
   TAB = name;
   document.querySelectorAll('#tabs button').forEach(b => { const on = b.dataset.tab === name; b.classList.toggle('on', on); b.setAttribute('aria-selected', on ? 'true' : 'false'); });
-  ['overview', 'operator', 'manager'].forEach(n => $('view-' + n).classList.toggle('on', n === name));
+  ['overview', 'operator', 'manager', 'jobs', 'try'].forEach(n => $('view-' + n).classList.toggle('on', n === name));
   lastUi = ''; lastChips = ''; MJ.key = '';
 }
 function setArm(kind) {
@@ -209,7 +224,7 @@ function chipsHtml(cur) {
   }).join('') || '<span class="empty">The trials appear here as the cell starts them.</span>';
 }
 function alertInfo(a) {
-  return { fault: ['bad', 'Fault'], recovery: ['ok', 'Recovered'], candidate_skipped: ['warn', 'Skipped'], alert_queued: ['bad', 'Waiting for staff'] }[a.kind] || ['', a.kind];
+  return { fault: ['bad', 'Fault'], recovery: ['ok', 'Recovered'], candidate_skipped: ['warn', 'Skipped'], alert_queued: ['bad', 'Waiting for staff'], batch_rejected: ['ok', 'Batch rejected'], deviation_accepted: ['warn', 'Accepted deviation'], job_blocked: ['bad', 'Job blocked'] }[a.kind] || ['', a.kind];
 }
 function svgAxes(W, H, pl, pr, pt, pb, top, n, fmt) {
   const x = k => pl + (W - pl - pr) * (k - 1) / Math.max(1, n - 1), y = v => H - pb - (H - pb - pt) * v / top;
@@ -254,41 +269,167 @@ function renderChecks() {
     + (d.demo ? '<dt>Note</dt><dd>Demonstration scenario chosen by the presenter</dd>' : '') + '</dl></div>';
 }
 function renderLists() {
-  const key = S.results.length + ':' + S.alerts.length + ':' + S.eventTotal + ':' + S.status + ':' + S.message + ':' + VC.log.length + ':' + VC.sel + ':' + TL.length + ':' + TAB;
+  const key = S.results.length + ':' + S.alerts.length + ':' + S.eventTotal + ':' + S.status + ':' + S.message + ':' + VC.log.length + ':' + VC.sel + ':' + TL.length + ':' + TAB + ':' + gateSig + ':' + S.decisions.length + ':' + queueSig;
   if (key === lastUi) return; lastUi = key;
   const resultsRows = S.results.filter(r => r.verdict !== 'No result'), skipped = S.results.length - resultsRows.length;
   const good = S.results.length ? S.results[S.results.length - 1].good_so_far : 0, notGood = resultsRows.length - good;
   const rec = S.alerts.filter(a => a.kind === 'recovery').length, faults = S.alerts.filter(a => a.kind === 'fault').length, waiting = S.alerts.filter(a => a.kind === 'alert_queued').length, skips = S.alerts.filter(a => a.kind === 'candidate_skipped').length;
   // chrome
-  $('mgrBadge').textContent = waiting; $('mgrBadge').classList.toggle('show', waiting > 0);
+  const gateN = S.approval ? 1 : 0; $('mgrBadge').textContent = waiting + gateN; $('mgrBadge').classList.toggle('show', waiting + gateN > 0);
   $('cxStudy').textContent = S.setupLabel || 'Loading...';
-  const st = $('cxState'); st.className = 'pill ' + S.status; st.textContent = S.message || ({ ready: 'Ready: press play', running: 'Running', paused: 'Paused', finished: 'Finished', stopped: 'Stopped', failed: 'Stopped' }[S.status] || S.status);
+  const st = $('cxState'); st.className = 'pill ' + S.status; st.textContent = S.approval ? 'Waiting for a decision' : (S.message || ({ ready: 'Ready: press play', running: 'Running', paused: 'Paused', finished: 'Finished', stopped: 'Stopped', failed: 'Stopped' }[S.status] || S.status));
   $('cxProgress').textContent = TL.length + (TL.length === 1 ? ' trial' : ' trials') + ' started · ' + resultsRows.length + ' with a result · ' + good + ' good';
-  const pb = $('playBtn'); pb.innerHTML = S.status === 'running' ? '&#10074;&#10074;' : '&#9654;'; pb.setAttribute('aria-label', S.status === 'running' ? 'Pause the run' : S.status === 'finished' ? 'The run has finished' : 'Start the run'); pb.disabled = S.status === 'finished' || S.status === 'failed';
+  const pb = $('playBtn'); pb.innerHTML = S.status === 'running' ? '&#10074;&#10074;' : '&#9654;'; pb.setAttribute('aria-label', S.status === 'running' ? 'Pause the run' : S.status === 'finished' ? 'The run has finished' : 'Start the run'); pb.disabled = S.status === 'finished' || S.status === 'blocked' || S.status === 'failed' || !!S.approval;
   document.querySelectorAll('#speedGroup button').forEach(b => b.classList.toggle('on', Number(b.dataset.speed) === S.speed)); $('speedSel').value = String(S.speed);
   $('saved').textContent = S.saved ? 'The finished run has been saved.' : '';
   // overview
   $('kStarted').textContent = TL.length; $('kDone').textContent = resultsRows.length; $('kGood').textContent = good; $('kFaults').textContent = rec; $('kFaultsS').textContent = 'recovered of ' + faults + ' fault' + (faults === 1 ? '' : 's'); $('kAlerts').textContent = waiting;
   $('kRight').textContent = VC.right; $('kWrong').textContent = VC.wrong; $('kCheck').textContent = VC.check;
   $('kMini').innerHTML = '<i class="a" style="flex-grow:' + VC.right + '"></i><i class="b" style="flex-grow:' + VC.wrong + '"></i><i class="c" style="flex-grow:' + VC.check + '"></i>';
-  const att = S.alerts.slice().reverse().slice(0, 6).map(a => { const i = alertInfo(a); return '<div class="rowitem ' + i[0] + '"><div><b>' + esc(i[1]) + '</b> <small>' + (a.trial ? 'Trial ' + a.trial : '') + '</small><br><small>' + esc(a.message) + '</small></div><small>' + esc(a.when) + '</small></div>'; }).join('');
-  $('attBody').innerHTML = att || '<p class="empty">No fault so far. The cell asks a person only when it cannot carry on alone.</p>';
+  const att = S.alerts.slice().reverse().slice(0, 6).map(a => { const i = alertInfo(a); return '<div class="rowitem ' + i[0] + '"><div><b>' + esc(i[1]) + '</b> ' + riskTag(a) + ' <small>' + (a.trial ? 'Trial ' + a.trial : '') + '</small><br><small>' + esc(a.message) + '</small></div><small>' + esc(a.when) + '</small></div>'; }).join('');
+  $('attBody').innerHTML = (gateAttention() + att) || '<p class="empty">No fault so far. The cell asks a person only when it cannot carry on alone.</p>';
   $('attMeta').textContent = S.alerts.length ? S.alerts.length + ' so far' : 'Faults and alerts as they happen';
   $('ovBars').innerHTML = [['Good', good, 'var(--green)'], ['Not good', notGood, 'var(--amber)'], ['Skipped', skipped, 'var(--red)']].map(r => '<div class="bar"><span>' + r[0] + '</span><div class="t"><i style="width:' + (TL.length ? r[1] / TL.length * 100 : 0) + '%;background:' + r[2] + '"></i></div><b>' + r[1] + '</b></div>').join('');
   // operator
-  $('checksList').scrollTop = 0; renderChecks();
+  $('checksList').scrollTop = 0; renderChecks(); renderReason();
   // manager
-  $('aNeeds').classList.toggle('hot', waiting > 0);
-  $('aNeedsBig').textContent = waiting > 0 ? waiting + ' waiting for staff' : 'Nothing waiting';
+  $('aNeeds').classList.toggle('hot', waiting > 0 || gateN > 0);
+  $('aNeedsBig').textContent = [S.approval ? '1 waiting for approval' : '', waiting > 0 ? waiting + ' waiting for staff' : ''].filter(Boolean).join(' \u00b7 ') || 'Nothing waiting';
   const lastWait = S.alerts.filter(a => a.kind === 'alert_queued').slice(-1)[0];
-  $('aNeedsS').textContent = lastWait ? lastWait.message : 'A person is asked only when the cell cannot carry on alone.';
+  $('aNeedsS').textContent = S.approval ? 'High risk: a person must accept or reject the flagged vial (see the Operator view).' : (lastWait ? lastWait.message : 'A person is asked only when the cell cannot carry on alone.');
   $('aHand').textContent = S.status === 'finished' ? 'Run complete' : S.status === 'running' ? 'In progress' : 'Not yet';
   $('aHandS').textContent = S.summary ? S.summary.headline + '. ' + S.summary.attempts_text + '.' : 'The cell hands over to the morning team at the end of the run.';
   $('aRec').textContent = rec; $('aSkip').textContent = skips; $('aWait').textContent = waiting;
   $('results').innerHTML = S.results.length ? '<table><thead><tr><th>Trial</th><th>When</th><th class="num">Dissolution %</th><th class="num">Hardness kP</th><th>Result</th></tr></thead><tbody>' + S.results.slice().reverse().map(r => '<tr class="' + (r.verdict === 'Good' ? 'g' : r.verdict === 'No result' ? 'n' : 'b') + '"><td>' + r.trial + '</td><td>' + esc(r.when) + '</td><td class="num">' + (r.dissolution_pct === null ? '' : r.dissolution_pct.toFixed(1)) + '</td><td class="num">' + (r.hardness_kp === null ? '' : r.hardness_kp.toFixed(2)) + '</td><td><span class="tag ' + (r.verdict === 'Good' ? 'ok' : r.verdict === 'No result' ? 'bad' : 'warn') + '">' + esc(r.verdict) + '</span></td></tr>').join('') + '</tbody></table>' : '<p class="empty" style="padding:14px">No result yet: a result appears here when its test has finished.</p>';
   drawGood(); drawDots('chartD', 'dissolution_pct', 100, '%', 'Dissolution at 30 min (%)'); drawDots('chartH', 'hardness_kp', 0, ' kP', 'Hardness (kP)');
-  $('alerts').innerHTML = S.alerts.length ? S.alerts.slice().reverse().map(a => { const i = alertInfo(a); return '<li><span class="tag ' + i[0] + '">' + esc(i[1]) + '</span> <b>' + esc(a.when) + '</b> ' + esc(a.message) + '</li>'; }).join('') : '<li class="empty">No fault so far.</li>';
+  $('alerts').innerHTML = S.alerts.length ? S.alerts.slice().reverse().map(a => { const i = alertInfo(a); return '<li><span class="tag ' + i[0] + '">' + esc(i[1]) + '</span> ' + riskTag(a) + ' <b>' + esc(a.when) + '</b> ' + esc(a.message) + '</li>'; }).join('') : '<li class="empty">No fault so far.</li>';
   $('events').innerHTML = S.events.slice(-16).reverse().map(e => '<li><b>' + esc(e.when) + '</b> ' + esc(e.message) + '</li>').join('') || '<li class="empty">Nothing has happened yet.</li>';
+  renderDecisions(); renderJobs();
+}
+// ---------------------------------------------------------------- how the engine chose its latest recipe
+// The engine wrote its numbers into the reason sentence of its decision event. This reads them back out of that sentence and lays them out; it calculates nothing and decides nothing
+// (the one comparison is which of two published chances to name as the weaker). A chance is never printed as a flat 100% or 0%: an estimate is never certain.
+const DECISION_RE = /^Trial (\d+): ([\s\S]*?)\. Recipe: ([\s\S]*?)\.( \([\s\S]*\))?$/;
+const LEARNED_RE = /^Chosen from (\d+) measured results\. Estimated chance of passing both specifications(, allowing for test-to-test scatter)?: ([<>]?\d+)% \(dissolution of (.+?): ([<>]?\d+)%; hardness (.+?): ([<>]?\d+)%\)\. Expected dissolution (\d+)% \(give or take (\d+)\) and hardness ([\d.]+) kP \(give or take ([\d.]+)\)\. This recipe sits (?:close to trial (\d+)'s recipe, refining what worked there|in a part of the space not yet tested \(nearest earlier recipe: trial (\d+)\))\. Best result so far: trial (\d+)\.(?: (\d+) skipped trial\(s\) with no result are ignored\.)?$/;
+const pctNum = s => parseFloat(String(s).replace(/[<>]/, ''));
+const pctText = s => (s === '100' ? '>99%' : s === '0' ? '<1%' : s + '%');
+function resultLine(n) {
+  const r = S.results.find(x => x.trial === Number(n));
+  return r && r.dissolution_pct !== null ? 'trial ' + n + ' measured dissolution ' + r.dissolution_pct.toFixed(1) + '% and hardness ' + r.hardness_kp.toFixed(2) + ' kP (' + esc(r.verdict.toLowerCase()) + ')' : 'trial ' + n;
+}
+function renderReason() {
+  let ev = null; for (let i = S.events.length - 1; i >= 0; i--) { if (S.events[i].kind === 'decision') { ev = S.events[i]; break; } }
+  const m = ev && DECISION_RE.exec(ev.message), meta = $('reasonMeta'), body = $('reasonBody');
+  if (!m) { meta.textContent = 'Waiting for the first decision'; body.innerHTML = '<p class="empty">When the engine chooses a recipe, the reasoning behind the choice appears here.</p>'; return; }
+  const reason = m[2], recipe = '<p><b>Recipe chosen</b><br>' + esc(m[3]) + '</p>', L = LEARNED_RE.exec(reason);
+  meta.textContent = 'Recipe for trial ' + m[1] + ' \u00b7 decided ' + ev.when;
+  if (!L) {
+    const badge = /^Spread-out/.test(reason) ? 'STARTING SET' : /^Only \d+ usable/.test(reason) ? 'EXPLORING' : 'REASON';
+    body.innerHTML = '<div class="rs-top"><span class="rs-mode">' + badge + '</span><span>' + esc(reason) + '.</span></div><div class="rs-cols"><div>' + recipe + '</div><div></div></div>';
+    return;
+  }
+  const refining = L[12] !== undefined, near = L[12] || L[13], best = L[14], chance = pctText(L[3]), pd = pctText(L[5]), ph = pctText(L[7]);
+  const weakest = (pd === '>99%' && ph === '>99%') ? 'Both specifications look safe: dissolution ' + pd + ', hardness ' + ph + '.'
+    : pctNum(L[5]) <= pctNum(L[7]) ? 'Weakest point: dissolution ' + esc(L[4]) + ' (' + pd + ').' : 'Weakest point: hardness ' + esc(L[6]) + ' (' + ph + ').';
+  const reacting = near === best ? '<li>The closest earlier recipe, and the best result so far: ' + resultLine(near) + '.</li>'
+    : '<li>Closest earlier recipe: ' + resultLine(near) + '.</li><li>Best result so far: ' + resultLine(best) + '.</li>';
+  const scatter = L[2] ? 'The chance allows for the scatter seen between repeat tests and can still be wrong.'
+    : 'In this recording the chance leaves out the scatter seen between repeat tests, so it can read higher than the real chance that a test passes.';
+  body.innerHTML =
+    '<div class="rs-top"><span class="rs-mode ' + (refining ? 'refining' : 'exploring') + '">' + (refining ? 'REFINING' : 'EXPLORING') + '</span><span>' +
+    (refining ? 'The best-looking recipe sits close to trial ' + near + "'s, so the engine is refining what has already worked."
+              : 'The best-looking recipe is in a part of the space not yet tested (nearest earlier recipe: trial ' + near + '), so the engine is exploring.') + '</span></div>' +
+    '<div class="rs-cols"><div class="rs-tile"><div class="k">Chance a test of this recipe passes both specifications</div><div class="v">' + chance + '</div><div class="t"><i style="width:' + pctNum(L[3]) + '%"></i></div>' +
+    '<div class="s">From ' + L[1] + ' measured results</div><div class="w">' + weakest + '</div></div>' +
+    '<div><h5>What it expects</h5><p>Dissolution <b>' + L[8] + '% (give or take ' + L[9] + ')</b><br>Hardness <b>' + L[10] + ' kP (give or take ' + L[11] + ')</b></p>' + recipe + '</div></div>' +
+    '<div class="rs-cols" style="grid-template-columns:minmax(0,1fr)"><div><h5>What it is reacting to</h5><ul>' + reacting + '</ul></div></div>' +
+    '<p class="rs-note">' + scatter + (L[15] ? ' ' + L[15] + ' skipped trial(s) with no result were left out.' : '') + ' Illustrative: these are the simulation\'s estimates, not predictions about real tablets.</p>' +
+    '<details class="rs-more"><summary>The engine\'s own wording</summary><p>' + esc(reason) + '.</p></details>';
+}
+// ---------------------------------------------------------------- high-risk findings wait for a person
+// A finding that could change what goes into the tablet (a vial that is not the one the plan expects) makes the cell stop: the simulation's clock stands still and this card asks a person to accept or reject it.
+// The simulation goes on only when the answer reaches it. Faults the cell can clear by itself are tagged low risk and carry on as before. Every decision is logged in the Lab manager view.
+const LOWTAG = '<span class="tag" title="Handled automatically: no decision needed">LOW RISK</span>';
+const riskTag = a => (a.risk === 'high' ? '<span class="tag bad">HIGH RISK</span>' : (['fault', 'recovery', 'candidate_skipped', 'alert_queued'].includes(a.kind) ? LOWTAG : ''));
+function renderGate() {
+  const g = S.approval, el = $('gate');
+  if (g) {
+    el.innerHTML = '<div class="gate-card" tabindex="-1"><div class="gate-head"><span class="risk">HIGH RISK</span><b>Needs your decision: ' + esc(g.title.toLowerCase()) + '</b><small>Trial ' + g.trial + ' &middot; ' + esc(g.when) + ' &middot; run paused</small></div>' +
+      '<p><b>What the cell found:</b> ' + esc(g.found) + '</p><p><b>What the cell recommends:</b> ' + esc(g.recommend) + ' The run stays paused until a person decides.</p>' +
+      '<div class="gate-btns"><button class="accept" id="gateAccept">Accept: carry on with this vial</button><button class="reject" id="gateReject">Reject: skip this batch</button></div>' +
+      '<p class="gate-note">Illustrative. Reject skips this batch and the cell moves on to the next one by itself. Accept lets the batch go on and logs it as an accepted deviation. Either way the decision is logged in the Lab manager view.</p></div>';
+    $('gateAccept').onclick = () => post('decide', 'accept'); $('gateReject').onclick = () => post('decide', 'reject');
+  } else el.innerHTML = '';
+  ['playBtn', 'resetBtn', 'restartBtn', 'speedSel', 'setupSel'].forEach(id => { const b = $(id); if (b) b.disabled = !!g; });
+  document.querySelectorAll('#speedGroup button').forEach(b => { b.disabled = !!g; });
+}
+function gateChanged() {
+  const sig = S.approval ? S.approval.trial + ':' + S.approval.decision : '';
+  if (sig === gateSig) return;
+  const opened = !!S.approval && !gateSig;
+  gateSig = sig; lastUi = ''; renderGate();
+  if (opened) { setTab('operator'); window.scrollTo({ top: 0, behavior: 'instant' }); toast('High risk: the run is paused and needs a person to decide.'); }
+}
+function gateAttention() {
+  const g = S.approval;
+  return g ? '<div class="rowitem bad"><div><b>Waiting for approval</b> <span class="tag bad">HIGH RISK</span> <small>Trial ' + g.trial + '</small><br><small>' + esc(g.title) + ': a person must accept or reject (see the Operator view).</small></div><small>' + esc(g.when) + '</small></div>' : '';
+}
+function renderDecisions() {
+  const rows = S.decisions.slice().reverse().map(e => '<div class="rowitem ' + (e.decision === 'Accepted' ? 'warn' : e.decision === 'Rejected' ? 'ok' : 'bad') + '"><div><b>' + esc(e.title) + '</b> <span class="tag bad">HIGH RISK</span><br><small>' + esc(e.found) + '</small><br><small>Trial ' + e.trial + ' &middot; ' + esc(e.when) + '</small></div>' +
+    '<div style="text-align:right"><b>' + esc(e.decision) + '</b><br><small>' + (e.decided_at ? 'decided by a person at ' + esc(e.decided_at) + ' (this computer\'s clock)' : '') + '</small></div></div>').join('');
+  $('decisions').innerHTML = rows || '<p class="empty">No high-risk finding so far. When the cell finds something that could change what is in the tablet (for example a vial that is not the one the plan expects) it stops and a person must accept or reject it. Choose Example 4 in the Study list to see it.</p>';
+}
+// ---------------------------------------------------------------- the job queue
+// The queue lists the jobs of several drugs (one whole run each) and says where each one stands. The cell does one job at a time. A job is started by a click, or the queue runs itself, one job after another.
+// A job that runs out of an ingredient stops and is marked blocked, with the reason in plain words, and the queue moves on. The order is first come, first served until the real rules are written down.
+const JOB_STATUS = { 'pending': ['', 'PENDING'], 'in progress': ['look', 'IN PROGRESS'], 'completed': ['ok', 'COMPLETED'], 'blocked': ['bad', 'BLOCKED'] };
+function jobButton(j, busy) {
+  if (j.status === 'in progress') return '<span class="empty">Running now</span>';
+  if (j.status === 'completed') return '';
+  return '<button class="ghost" data-job="' + esc(j.id) + '"' + (busy ? ' disabled' : '') + '>' + (j.status === 'blocked' ? 'Start again' : 'Start') + '</button>';
+}
+function renderJobs() {
+  const q = S.queue; if (!q) return;
+  const busy = !!q.active, waiting = q.jobs.filter(j => j.status === 'pending').length, blocked = q.jobs.filter(j => j.status === 'blocked').length;
+  $('jobsBadge').textContent = blocked; $('jobsBadge').classList.toggle('show', blocked > 0);
+  $('jobsMeta').textContent = q.automated ? 'Running itself, one job after another' : busy ? 'One job is running' : 'Nothing is running';
+  $('jobsBody').innerHTML = q.jobs.map(j => {
+    const st = JOB_STATUS[j.status] || ['', j.status];
+    return '<div class="jobrow"><div class="jn"><b>' + esc(j.drug) + '</b><small>' + esc(j.setup_label) + '</small></div><div class="jst"><span class="tag ' + st[0] + '">' + st[1] + '</span></div>' +
+      '<div class="jpr">' + (j.status === 'pending' ? 'Waiting' : j.trials_started + ' trials started &middot; ' + j.trials_with_result + ' with a result &middot; ' + j.good + ' good') + '</div><div class="jact">' + jobButton(j, busy) + '</div>' +
+      (j.reason ? '<div class="jwhy"><b>Why it stopped:</b> ' + esc(j.reason) + '</div>' : '') + '</div>';
+  }).join('');
+  document.querySelectorAll('#jobsBody [data-job]').forEach(b => { b.onclick = () => post('job_start', b.dataset.job); });
+  $('jobsRunAll').disabled = busy || waiting === 0; $('jobsStopAuto').hidden = !q.automated;
+  $('shelfBody').innerHTML = q.supplies.map(s => {
+    const pct = Math.max(0, Math.min(100, s.left_g / s.full_g * 100));
+    return '<div class="shelfbar"><span>' + esc(s.label) + '</span><div class="t"><i style="width:' + pct + '%;background:' + (pct < 12 ? 'var(--red)' : pct < 30 ? 'var(--amber)' : 'var(--green)') + '"></i></div><b>' + s.left_g.toFixed(1) + ' g</b></div>';
+  }).join('');
+}
+// ---------------------------------------------------------------- try a recipe yourself
+// The person types their own recipe. The server's virtual lab measures it and the engine says what it would do next. The page sends five numbers and shows what comes back: it measures and chooses nothing itself.
+function tryDone() { const b = $('tryGo'); if (b) b.disabled = false; }
+function renderTryForm() {
+  const d = S.design; if (!d) return;
+  $('tryForm').innerHTML = d.ingredients.map(i => '<label class="tryrow" for="tryIn_' + esc(i.key) + '"><span>' + esc(i.label) + '</span><input type="number" id="tryIn_' + esc(i.key) + '" step="0.1" min="' + i.min + '" max="' + i.max + '" value="' + i.start + '"><small>' + i.min + ' to ' + i.max + ' %</small></label>').join('');
+  $('tryTargets').textContent = 'A recipe is good when dissolution is ' + d.targets.dissolution + ' and hardness is ' + d.targets.hardness + '. Type your own values, within the ranges, and the lab will measure them.';
+}
+function tryRecipe() {
+  const d = S.design; if (!d) return;
+  const v = {}; d.ingredients.forEach(i => { const el = $('tryIn_' + i.key); v[i.key] = el && el.value !== '' ? Number(el.value) : null; });
+  $('tryGo').disabled = true; setTimeout(tryDone, 15000);
+  post('try_recipe', v);
+}
+function renderTry() {
+  const r = S.whatif, out = $('tryOut'); tryDone();
+  if (!r || !S.design) { out.innerHTML = '<p class="empty">Press the button. The lab measures the recipe, and the engine says what it would try next.</p>'; return; }
+  const m = r.measured, t = S.design.targets, lines = rec => S.design.ingredients.map(i => '<li>' + esc(i.label) + ': <b>' + rec[i.key] + '%</b></li>').join('');
+  const met = ok => '<span class="tag ' + (ok ? 'ok' : 'warn') + '">' + (ok ? 'MET' : 'MISSED') + '</span>';
+  out.innerHTML = '<div class="rs-cols"><div class="rs-tile"><div class="k">What the lab measured (trial ' + r.trial + ')</div><div class="v">' + (m.good ? 'GOOD' : 'Not good') + '</div>' +
+    '<div class="w">Dissolution <b>' + m.dissolution_pct + '%</b> (needs ' + esc(t.dissolution) + ') ' + met(m.dissolution_ok) + '<br>Hardness <b>' + m.hardness_kp + ' kP</b> (needs ' + esc(t.hardness) + ') ' + met(m.hardness_ok) + '</div></div>' +
+    '<div><h5>What the engine would try next (trial ' + r.next.trial + ')</h5><ul>' + lines(r.next.recipe) + '</ul><p><b>Why:</b> ' + esc(r.next.reason) + '</p></div></div>' +
+    '<p class="rs-note">Illustrative. The engine has already seen the usual six starting recipes and what the lab measured for them, and then sees yours as trial ' + r.trial + '. Each try is measured afresh, so the same recipe tried twice reads a little differently, as in a real lab.</p>' +
+    '<details class="rs-more"><summary>The six starting results the engine had already seen</summary><p>' + r.starting.map(x => 'Trial ' + x.trial + ': dissolution ' + x.dissolution_pct + '%, hardness ' + x.hardness_kp + ' kP, ' + (x.good ? 'good' : 'not good')).join('<br>') + '</p></details>';
 }
 function renderStrips(cur) {
   const key = TL.length + ':' + cur + ':' + S.results.length + ':' + TAB; if (key === lastChips) return; lastChips = key;
@@ -555,6 +696,9 @@ function boot() {
   visionReset(); heroPicture();
   document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => setTab(b.dataset.tab));
   $('playBtn').onclick = () => post(S.status === 'running' ? 'pause' : 'start');
+  $('jobsRunAll').onclick = () => post('job_run_all'); $('jobsStopAuto').onclick = () => post('job_stop_auto');
+  $('jobsRestock').onclick = () => post('job_restock'); $('jobsReset').onclick = () => post('job_reset');
+  $('tryGo').onclick = tryRecipe; renderTry();
   $('resetBtn').onclick = $('restartBtn').onclick = () => { closeMenus(); post('restart').then(resetLocal); };
   document.querySelectorAll('#speedGroup button').forEach(b => b.onclick = () => post('speed', Number(b.dataset.speed)));
   $('speedSel').onchange = () => post('speed', parseFloat($('speedSel').value));
@@ -577,7 +721,7 @@ function boot() {
   $('explainBtn').onclick = openExplain; $('aboutBtn').onclick = openAbout; $('tourBtn').onclick = tourStart; $('heroTour').onclick = tourStart;
   $('heroStart').onclick = demoStart; $('guidedBtn').onclick = demoStart;
   $('modal').onclick = e => { if (e.target === $('modal')) closeModal(); };
-  if (Q.get('tab') && ['overview', 'operator', 'manager'].includes(Q.get('tab'))) setTab(Q.get('tab'));
+  if (Q.get('tab') && ['overview', 'operator', 'manager', 'jobs', 'try'].includes(Q.get('tab'))) setTab(Q.get('tab'));
   if (['wrong', 'unreadable', 'blank', 'liquid', 'defective'].includes(Q.get('demo'))) setArm(Q.get('demo'));          // a link can open the console with a scenario already armed for the first pick
   let seen = false; try { seen = !!sessionStorage.getItem('welcomed'); } catch (e) { /* no storage: the welcome opens each time */ }
   if (Q.get('welcome') !== 'off' && !seen) openWelcome();

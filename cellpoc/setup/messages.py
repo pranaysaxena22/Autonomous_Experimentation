@@ -191,6 +191,9 @@ _add("R29", "", "error", "Faults", "a scripted fault is on a trial that exists",
 _add("R30", "", "error", "Faults", "each trial has at most one scripted fault", "two scripted faults hit trial {trial}. Use one per trial.")
 _add("R31", "pour_needs_ingredient", "error", "Faults", "a fault on a pour says which ingredient", "a fault on a pour must say which ingredient. Choose one.")
 _add("R31", "unknown_ingredient", "error", "Faults", "a fault names an ingredient that exists", "'{ingredient}' is not an ingredient in this setup. Choose one from the Ingredients table.")
+_add("R74", "value", "error", "Faults", "a fault's risk is low or high", "the risk {risk} is not one of the choices. Write low or high.")
+_add("R74", "kind", "error", "Faults", "a high-risk fault is a wrong vial at the barcode scan",
+     "only a wrong vial at the barcode scan can be high risk, because it is the only fault a person can accept. Set the risk to low, or make this a fault at the barcode scan whose cause says wrong vial.")
 _add("R32", "", "error", "Faults", "a chance is a probability from 0 to 1",
      "the chance must be a probability from 0 to 1 (you wrote {shown}). {example}")
 _add("R48", "", "error", "Faults", "a fault names a step that exists",

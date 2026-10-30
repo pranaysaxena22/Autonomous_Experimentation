@@ -10,9 +10,10 @@ from pathlib import Path
 
 from ..connected import SCENARIO_NAMES
 from ..setup import PROJECT_ROOT, example_choices
-from ..setup.files import SETUPS_FOLDER
+from ..setup.files import PACKAGE_EXAMPLES, SETUPS_FOLDER
 
 SAVED_NAME = re.compile(r"^[a-z0-9][a-z0-9_-]{0,59}$")          # the names the setup app saves under
+APPROVAL_EXAMPLE = ("setup_example_4_approval.yaml", "Example 4: a wrong vial on trial 12 that needs a person to accept or reject it")
 
 
 @dataclass(frozen=True)
@@ -26,6 +27,9 @@ class Choice:
 
 def choices() -> list[Choice]:
     found = [Choice(f"example:{i}", label, "example", path) for i, (label, path) in enumerate(example_choices(), 1)]
+    approval = PACKAGE_EXAMPLES / APPROVAL_EXAMPLE[0]                 # the run with a wrong vial that needs a person: offered here only, so the other examples and the checks that loop over them stay as they were
+    if approval.is_file():
+        found.append(Choice("example:4", APPROVAL_EXAMPLE[1], "example", approval))
     folder = PROJECT_ROOT / SETUPS_FOLDER
     if folder.is_dir():
         found += [Choice(f"saved:{p.stem}", f"Your saved setup: {p.stem}", "saved", p) for p in sorted(folder.glob("*.yaml")) if SAVED_NAME.match(p.stem)]

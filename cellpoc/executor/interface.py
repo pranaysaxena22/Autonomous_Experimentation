@@ -23,6 +23,8 @@ class Fault:
     retry_succeeds: bool
     ingredient: str | None = None                  # which ingredient's bottle, when the fault is at a pour
     source: str = "scripted"                       # scripted (on purpose, on a named trial) or random (by chance)
+    risk: str = "low"                              # "high": it could change what goes into the tablet, so a person must accept or reject it before the cell goes on; "low": the cell handles it alone
+    accepted: bool = False                         # a person has accepted the flagged vial: the scan stands and the trial goes on with it (only a wrong vial at the scan can be accepted)
 
     @property
     def where(self) -> dict:

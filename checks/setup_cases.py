@@ -558,6 +558,16 @@ def _(s):
     s["faults"]["scripted"][1]["trial"] = s["faults"]["scripted"][0]["trial"]
 
 
+@mutation("R74", "value", "a fault whose risk is neither low nor high")
+def _(s):
+    s["faults"]["scripted"][0]["risk"] = "medium"
+
+
+@mutation("R74", "kind", "a high-risk fault that is a jam, not a wrong vial at the scan")
+def _(s):
+    s["faults"]["scripted"][0]["risk"] = "high"
+
+
 @mutation("R31", "pour_needs_ingredient", "a fault on a pour that names no ingredient")
 def _(s):
     s["faults"]["scripted"][0]["where"].pop("ingredient")

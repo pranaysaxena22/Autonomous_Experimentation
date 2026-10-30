@@ -49,7 +49,7 @@ FIELD_WORDS = {
     "staffed_until": "Staffed until", "purge_min": "Purge time (minutes)", "clean_after_skip": "Clean after a skipped candidate",
     "recovery": "Recovery", "tap_shake_s": "Tap-and-shake time (seconds)", "max_retries": "Maximum retries", "trial": "Trial",
     "where": "Where", "step": "Step", "action": "Action", "ingredient": "Ingredient", "cause": "Cause",
-    "retry_succeeds": "Retry succeeds", "chance_per_trial": "Chance per trial", "retry_succeeds_chance": "Chance the retry works",
+    "retry_succeeds": "Retry succeeds", "risk": "Risk", "chance_per_trial": "Chance per trial", "retry_succeeds_chance": "Chance the retry works",
     "manual_trials_per_week": "Manual trials per week", "campaigns": "Campaigns", "trials_per_campaign": "Trials per campaign",
     "initial_recipes": "Starting recipes", "candidates_per_decision": "Candidates per decision", "model": "Model",
     "sd": "Noise (standard deviation)", "run": "Seed", "experiments_file": "Experiments file", "meta_file": "Companion file",

@@ -200,6 +200,13 @@ class _Run:
         scripted = self.fault if (self.fault is not None and self.fault.action == "scan") else None
         cause = scripted.cause if scripted else ("wrong vial scanned" if verdict == "wrong_vial" else "barcode unreadable")
         where = scripted.where if scripted else {"step": a["step"], "action": "scan"}
+        if verdict == "wrong_vial" and scripted is not None and scripted.accepted:
+            # a person looked at the mismatch and accepted the vial: the scan stands (it takes its full planned time) and the trial goes on with it
+            seen = result.text or result.raw or "nothing"
+            self._planned(a, d, "ok", {"quantity": "barcode", "value": seen, "expected": expected},
+                          f"{a['caption']} Accepted by a person although the label ({seen}) is not the one the plan expects ({expected}).")
+            self.fault_record = {"action_id": a["id"], "cause": cause, "where": where, "recovered": True, "recovery_action_ids": []}
+            return True
         fail_s = max(5, _to(FAIL_FRACTION_OTHER * d, 5)) if d >= 10 else max(1, d // 2)
         fail_s = min(fail_s, max(1, d - 5)) if d > 5 else fail_s
         seen = result.text or result.raw or "nothing"

@@ -10,17 +10,17 @@ import random
 from .interface import Fault
 
 
-def _fault(where: dict, cause: str, retry_succeeds: bool, source: str) -> Fault:
-    return Fault(where["step"], where["action"], cause, retry_succeeds, where.get("ingredient"), source)
+def _fault(where: dict, cause: str, retry_succeeds: bool, source: str, risk: str = "low") -> Fault:
+    return Fault(where["step"], where["action"], cause, retry_succeeds, where.get("ingredient"), source, risk)
 
 
 def fault_for_trial(setup: dict, trial: int, seed: int) -> Fault | None:
     faults = setup.get("faults", {})
     for f in faults.get("scripted", []):
         if f["trial"] == trial:
-            return _fault(f["where"], f["cause"], bool(f["retry_succeeds"]), "scripted")
+            return _fault(f["where"], f["cause"], bool(f["retry_succeeds"]), "scripted", f.get("risk", "low"))
     for index, f in enumerate(faults.get("random", [])):
         draw = random.Random(f"platform-fault:{seed}:{trial}:{index}")
         if draw.random() < f["chance_per_trial"]:
-            return _fault(f["where"], f["cause"], draw.random() < f["retry_succeeds_chance"], "random")
+            return _fault(f["where"], f["cause"], draw.random() < f["retry_succeeds_chance"], "random", f.get("risk", "low"))
     return None

@@ -29,6 +29,12 @@ _TOO_CLOSE = 0.02                             # candidates this near a past reci
 _LOCAL_SPREAD = 0.07                          # how far to search around the best results so far
 _LOCAL_CENTRES = 3
 _LOCAL_PER_CENTRE = 400
+_NEARLY_CERTAIN = 0.995                       # at or above this a chance would print as 100%, so it prints as ">99%"
+
+
+def _pct(p: float) -> str:
+    """A chance as the pages show it: never a flat 100% or 0%, because a model's estimate is never certain."""
+    return ">99%" if p >= _NEARLY_CERTAIN else "<1%" if p < 1 - _NEARLY_CERTAIN else f"{p:.0%}"
 
 
 def _normal_cdf(z: np.ndarray) -> np.ndarray:
@@ -62,8 +68,9 @@ class _Model:
                 alpha = np.linalg.solve(chol.T, np.linalg.solve(chol, ys))
                 score = -0.5 * float(ys @ alpha) - float(np.log(np.diag(chol)).sum())
                 if best is None or score > best[0]:
-                    best = (score, lengthscale, chol, alpha)
-        _, self.lengthscale, self.chol, self.alpha = best  # type: ignore[misc]
+                    best = (score, lengthscale, noise, chol, alpha)
+        _, self.lengthscale, noise_share, self.chol, self.alpha = best  # type: ignore[misc]
+        self.noise_variance = noise_share * self.scale ** 2   # scatter between repeat tests, in the property's own units squared
 
     def predict(self, candidates: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """Expected value and uncertainty (one standard deviation) for each candidate."""
@@ -146,18 +153,27 @@ class AdaptiveStrategy:
 
         mu_d, sd_d = dissolution.predict(candidates)
         mu_h, sd_h = hardness.predict(candidates)
-        p_dissolves = 1.0 - _normal_cdf((specs.dissolution.minimum - mu_d) / sd_d)
-        p_hard = (_normal_cdf((specs.hardness.maximum - mu_h) / sd_h)
-                  - _normal_cdf((specs.hardness.minimum - mu_h) / sd_h))
-        chance = p_dissolves * p_hard
-        pick = int(np.argmax(chance))
+        # The pick is made on the model's view of the recipe itself (as it always was)...
+        pick = int(np.argmax(self._chances(mu_d, sd_d, mu_h, sd_h)[2]))
+        # ...but the figures REPORTED allow for the scatter between repeat tests, because a "pass" is a measured pass.
+        sd_d_test = float(np.sqrt(sd_d[pick] ** 2 + dissolution.noise_variance))
+        sd_h_test = float(np.sqrt(sd_h[pick] ** 2 + hardness.noise_variance))
+        p_dissolves, p_hard, chance = (float(v[0]) for v in self._chances(
+            mu_d[pick:pick + 1], np.array([sd_d_test]), mu_h[pick:pick + 1], np.array([sd_h_test])))
 
         nearest = int(np.argmin(((x - candidates[pick]) ** 2).sum(axis=1)))
         distance = float(np.sqrt(((x[nearest] - candidates[pick]) ** 2).sum()))
         return Proposal(self._to_recipe(candidates[pick]), self._why(
-            len(history), trial_number, skipped, float(chance[pick]), float(p_dissolves[pick]), float(p_hard[pick]),
-            float(mu_d[pick]), float(sd_d[pick]), float(mu_h[pick]), float(sd_h[pick]),
+            len(history), trial_number, skipped, chance, p_dissolves, p_hard,
+            float(mu_d[pick]), sd_d_test, float(mu_h[pick]), sd_h_test,
             history[nearest].trial_id, distance, best_results[0]))
+
+    def _chances(self, mu_d, sd_d, mu_h, sd_h):
+        """(chance dissolution is high enough, chance hardness is in range, chance of both), for arrays of candidates."""
+        s = self._specs
+        p_dissolves = 1.0 - _normal_cdf((s.dissolution.minimum - mu_d) / sd_d)
+        p_hard = _normal_cdf((s.hardness.maximum - mu_h) / sd_h) - _normal_cdf((s.hardness.minimum - mu_h) / sd_h)
+        return p_dissolves, p_hard, p_dissolves * p_hard
 
     def _candidates(self, rng: np.random.Generator, centres: list[Measurement]) -> np.ndarray:
         d = len(self._low)
@@ -171,9 +187,10 @@ class AdaptiveStrategy:
         s = self._specs
         where = (f"close to trial {nearest_trial}'s recipe, refining what worked there" if distance < 0.15
                  else f"in a part of the space not yet tested (nearest earlier recipe: trial {nearest_trial})")
-        text = (f"Chosen from {n_results} measured results. Estimated chance of passing both specifications: {chance:.0%} "
-                f"(dissolution of at least {s.dissolution.minimum:g}{s.dissolution.unit}: {p_dissolves:.0%}; "
-                f"hardness between {s.hardness.minimum:g} and {s.hardness.maximum:g} {s.hardness.unit}: {p_hard:.0%}). "
+        text = (f"Chosen from {n_results} measured results. Estimated chance of passing both specifications, "
+                f"allowing for test-to-test scatter: {_pct(chance)} "
+                f"(dissolution of at least {s.dissolution.minimum:g}{s.dissolution.unit}: {_pct(p_dissolves)}; "
+                f"hardness between {s.hardness.minimum:g} and {s.hardness.maximum:g} {s.hardness.unit}: {_pct(p_hard)}). "
                 f"Expected dissolution {mu_d:.0f}% (give or take {sd_d:.0f}) and hardness {mu_h:.1f} kP (give or take {sd_h:.1f}). "
                 f"This recipe sits {where}. Best result so far: trial {best.trial_id}.")
         if skipped:

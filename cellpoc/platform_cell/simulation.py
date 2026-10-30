@@ -11,11 +11,12 @@ proof of concept does. A trial with a fault in the cleaning step is not supporte
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from ..cell_simulator.simulator import _Simulation          # the proof of concept's own simulation class, reused so that nothing in the record's meaning changes
-from ..contracts import AlertRecord, Formulation, Lab, Measurement, Proposal, RunRecord, Strategy, StepInterval, meets_spec
+from ..contracts import AlertRecord, Formulation, IngredientMissing, Lab, Measurement, Proposal, RunRecord, Strategy, StepInterval, meets_spec
 from ..executor import Executor, Fault, ReadingProvider, fault_for_trial
+from ..executor.stand_in import WRONG_VIAL_WORDS
 from ..planner import plan_trial
 from ..settings import Settings
 from ..settings.models import ScriptedFaults
@@ -69,13 +70,16 @@ class LabReadings:
 
 
 class PlatformSimulation(_Simulation):
-    def __init__(self, settings: Settings, setup: dict, layout: dict, lab: Lab, strategy: Strategy, run_id: str, executor: Executor, world=None):
+    def __init__(self, settings: Settings, setup: dict, layout: dict, lab: Lab, strategy: Strategy, run_id: str, executor: Executor, world=None, supplies=None):
         """`world`, when given (the connected loop, cellpoc/connected), supplies a proposal's whole recipe, the process settings too, with `recipe_for(formulation)`, and a trial's readings with `readings(trial, formulation)`.
         Without it a trial's recipe is the proposal's five ingredients with the process settings at the middle of their ranges, and its readings come from the injected lab."""
         clean = bool(setup["faults"]["clean_after_skip"])
         super().__init__(settings, lab, strategy, run_id, ScriptedFaults(setup["faults"]["purge_min"], (), clean))
         self.setup, self.layout, self.executor, self.clean_after_skip, self.world = setup, layout, executor, clean, world
         self.seed = int(setup["seeds"]["run"])
+        self.supplies = supplies                # a shelf of ingredients with `take(needs)` (the job queue's); None means there is always enough
+        self.high_risk_trial: int | None = None   # the trial whose events belong to a high-risk finding (the page tags them)
+        self.approval_rule = "reject"           # what happens at a high-risk fault when no person is there to decide (a batch run, a replay, a test): the safe choice, skip the batch
         self.plans: list[dict] = []
         self.executed: list[dict] = []
         self._needed: float | None = None
@@ -95,6 +99,15 @@ class PlatformSimulation(_Simulation):
     def fault_for(self, trial: int) -> Fault | None:
         return fault_for_trial(self.setup, trial, self.seed)
 
+    @staticmethod
+    def needs_a_person(fault: Fault | None) -> bool:
+        """A high-risk fault stops the cell until a person accepts or rejects it. Only a wrong vial at the barcode scan can be accepted (the setup's rules say so)."""
+        return fault is not None and fault.risk == "high" and fault.action == "scan" and bool(WRONG_VIAL_WORDS.search(fault.cause))
+
+    def decide_approval(self, trial: int, minute: float, cause: str, detail: str) -> tuple[str, str]:
+        """(accept or reject, who decided). With no person to ask, the standing rule decides; the live run overrides this to wait for a person."""
+        return self.approval_rule, "the standing rule (nobody was there to decide)"
+
     def plan_and_run(self, trial: int, start_minute: float, formulation: Formulation, why: str, readings: ReadingProvider, fault: Fault | None) -> tuple[dict, dict]:
         plan = plan_trial(self.setup, self.layout, self.recipe_of(formulation), trial, start_minute, why, rescale=True)      # the proof of concept's ingredient levels do not add up to 100%: the planner scales them to a batch and says so
         return plan, self.executor.execute(plan, self.setup, self.layout, fault, readings, self.clean_after_skip, plan_file=f"plans/{plan['plan_id']}.json")
@@ -111,6 +124,15 @@ class PlatformSimulation(_Simulation):
     def planned_minutes(self, trial: int) -> float:
         return self._needed if self._needed is not None else self.settings.cell.minutes_per_trial
 
+    def needs_of(self, plan: dict) -> dict[str, float]:
+        """Grams of each ingredient the plan weighs out, by the setup's ingredient id."""
+        ingredient_of = {o["id"]: o["ingredient_id"] for o in self.layout["objects"] if o.get("ingredient_id")}
+        needs: dict[str, float] = {}
+        for a in plan["actions"]:
+            if a["type"] == "pour" and a.get("at") == "balance" and ingredient_of.get(a.get("object")):
+                needs[ingredient_of[a["object"]]] = needs.get(ingredient_of[a["object"]], 0.0) + a["amount_g"]
+        return needs
+
     def decide(self, trial: int, at: float, note: str = "") -> None:
         """Choose the next recipe, run it through the planner and the executor without readings to learn how long it will take, and keep it only if it fits before the run ends. `at` is when the decision is made;
         the trial starts at `at` unless the cleaning step is still to finish (decide_after handles that case)."""
@@ -118,9 +140,20 @@ class PlatformSimulation(_Simulation):
 
     def decide_after(self, trial: int, at: float, start: float, note: str = "") -> None:
         proposal = self.strategy.propose(trial, tuple(self.history), tuple(self.skipped))
-        _, dry = self.plan_and_run(trial, start, proposal.formulation, proposal.reason, _NoNumbers(), self.fault_for(trial))
+        fault = self.fault_for(trial)
+        plan, dry = self.plan_and_run(trial, start, proposal.formulation, proposal.reason, _NoNumbers(), fault)
         minutes = self.seconds(dry) / 60
+        if self.needs_a_person(fault):                                        # the person may accept, and then the trial runs to its end: it must fit that way too
+            _, longer = PlatformSimulation.plan_and_run(self, trial, start, proposal.formulation, proposal.reason, _NoNumbers(), replace(fault, accepted=True))
+            minutes = max(minutes, self.seconds(longer) / 60)
         if start + minutes <= self.duration:
+            if self.supplies is not None:                                          # the batch is weighed out of the shelf now; if an ingredient cannot cover it the job stops here, cleanly, between trials
+                try:
+                    self.supplies.take(self.needs_of(plan))
+                except IngredientMissing as missing:
+                    self.blocked, self.pending = missing, None
+                    self.log(at, "job_blocked", f"Trial {trial}: BLOCKED - {missing.message} The job stops here.", trial)
+                    return
             self.pending = proposal
             self.log(at, "decision", f"Trial {trial}: {proposal.reason}. Recipe: {self.recipe_text(proposal.formulation)}.{note}", trial)
         else:
@@ -134,6 +167,7 @@ class PlatformSimulation(_Simulation):
         plan, executed = self.plan_and_run(trial, start, proposal.formulation, proposal.reason, readings, fault)
         self.plans.append(plan)
         self.executed.append(executed)
+        gated = self.needs_a_person(fault)
         at = lambda seconds: start + seconds / 60.0
         intervals: list[StepInterval] = []
         notes: list[str] = []
@@ -155,7 +189,12 @@ class PlatformSimulation(_Simulation):
                                                f"Cleaning after the skipped candidate (trial {trial})" if skipped else f"{step.label}: trial {trial}"))
                 self.minute = e
                 continue
-            if faulted:
+            if faulted and gated:
+                accepted, e = self.gated_scan_step(trial, step, name, s, e, start, mine, executed, fault, proposal, readings, intervals, notes)
+                if accepted:                                                  # the rest of the trial is the one the executor planned for an accepted vial
+                    executed = self.executed[-1]
+                    actions, skipped = executed["actions"], False
+            elif faulted:
                 self.faulted_step(trial, step, s, e, mine, executed, intervals, notes)
             else:
                 self.log(s, "step_started", f"Trial {trial}: {step.label} started.", trial, step.name)
@@ -173,6 +212,49 @@ class PlatformSimulation(_Simulation):
         else:
             assert measurement is not None                                    # the plan always has a test step with its reads
             self.finish_completed(trial, proposal, start, intervals, notes, measurement, reason_interval, adapt_interval)
+
+    def timeline_changed(self, executed: dict) -> None:
+        """An accepted vial replaces the timeline the trial was planned with. A batch run keeps only the final one; the live run tells the page."""
+
+    def gated_scan_step(self, trial: int, step, name: str, s: float, e: float, start: float, mine: list[dict], executed: dict, fault: Fault, proposal: Proposal,
+                        readings: ReadingProvider, intervals: list[StepInterval], notes: list[str]) -> tuple[bool, float]:
+        """A wrong vial at the scan, flagged high risk: it could change what goes into the tablet, so the cell stops and a person accepts or rejects it. Returns (accepted, the step's end minute).
+        Both outcomes are planned in advance (the executor is deterministic) and are the same until the decision. Reject: the vial is put back and the batch is skipped, as for any skipped candidate.
+        Accept: the scan stands and the trial goes on with the flagged vial, logged as an accepted deviation."""
+        label = step.label
+        self.high_risk_trial = trial
+        record = executed["faults"][0]
+        cause = record["cause"]
+        failed = next(a for a in mine if a["id"] == record["action_id"])
+        tf = start + (failed["actual_start_s"] + failed["actual_duration_s"]) / 60.0
+        detail = failed["fault"]["detail"]
+        self.log(s, "step_started", f"Trial {trial}: {label} started.", trial, step.name)
+        self.log(tf, "fault", f"Trial {trial}: FAULT - {cause} at {label}. The vial's label was not accepted.", trial, step.name)
+        self.log(tf, "approval_requested", f"Trial {trial}: HIGH RISK - {detail} A person must accept or reject this vial before the cell goes on.", trial, step.name)
+        choice, by = self.decide_approval(trial, tf, cause, detail)
+        title = cause[:1].upper() + cause[1:]
+        if choice == "accept":
+            _, again = PlatformSimulation.plan_and_run(self, trial, start, proposal.formulation, proposal.reason, readings, replace(fault, accepted=True))
+            self.executed[-1] = again
+            self.timeline_changed(again)
+            same = [a for a in again["actions"] if a["step"] == name]
+            end = start + (same[-1]["actual_start_s"] + same[-1]["actual_duration_s"]) / 60.0
+            self.log(tf, "deviation_accepted", f"Trial {trial}: ACCEPTED by {by} - the flagged vial is used and the batch goes on. It is logged as an accepted deviation.", trial, step.name)
+            intervals.append(self.interval(step, label, "step", "completed", s, end, "working", f"{label}: trial {trial}"))
+            notes.append(f"{title} at {label}: accepted by {by}. The batch went on with the flagged vial and is logged as an accepted deviation.")
+            self.alerts.append(AlertRecord(tf, self.clock.iso(tf), self.clock.when(tf), trial, "Accepted deviation", f"{title} (accepted)",
+                                           f"{title} on trial {trial} - accepted by {by}, the batch went on with the flagged vial", False, None, None))
+            self.log(end, "step_finished", f"Trial {trial}: {label} finished.", trial, step.name)
+            return True, end
+        self.timeline_changed(executed)                                       # the page had only the part up to the stop: now it gets the whole trial
+        intervals.append(self.interval(step, f"{label} - failed attempt", "failed_attempt", "failed", s, tf, "working", f"{label}: trial {trial}"))
+        self.log(tf, "batch_rejected", f"Trial {trial}: REJECTED by {by} - the vial is put back and the batch is skipped.", trial, step.name)
+        intervals.append(self.interval(step, f"{label} - vial put back", "retry", "failed", tf, e, "retry", f"Putting the wrong vial back: trial {trial}"))
+        self.log(e, "candidate_skipped", f"Trial {trial}: candidate SKIPPED - no tablets were made and no result exists.", trial, step.name)
+        notes.append(f"{title} at {label}: rejected by {by}. The vial was put back and the batch was skipped; it has no result.")
+        self.alerts.append(AlertRecord(e, self.clock.iso(e), self.clock.when(e), trial, "Rejected by " + ("a person" if by == "a person" else "the standing rule"), f"{title} (batch skipped)",
+                                       f"{title} on trial {trial} - rejected by {by}, the batch was skipped", False, None, None))
+        return False, e
 
     def clean_step(self, trial: int, step, s: float, e: float, after_skip: bool):
         """The last step: the first part is Reason (the next recipe is chosen), the rest is Adapt."""

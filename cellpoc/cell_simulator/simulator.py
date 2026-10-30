@@ -51,6 +51,7 @@ class _Simulation:
         self.events: list[EventRecord] = []
         self.alerts: list[AlertRecord] = []
         self.pending: Proposal | None = None
+        self.blocked = None                   # set to an IngredientMissing when the run stops for want of an ingredient (the job queue's shelf); None in every ordinary run
 
     # ------------------------------------------------------------------ planning
     def planned_minutes(self, trial: int) -> float:
@@ -116,7 +117,9 @@ class _Simulation:
             self.run_trial(trial, proposal)
             trial += 1
 
-        if self.minute < self.duration:
+        if self.blocked is not None:
+            self.log(self.minute, "run_finished", f"The job stopped here: {self.blocked.message}")
+        elif self.minute < self.duration:
             needed = self.planned_minutes(trial)
             self.log(self.duration, "run_finished",
                      f"Run window ended. Another trial needs {needed:g} minutes and only "

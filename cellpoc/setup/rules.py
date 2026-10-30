@@ -24,6 +24,7 @@ from .tablefile import EXCEL_SUFFIXES, match_key, normalise_name, read_header
 from .units import UNITS, compare
 
 EXPECTED_STEPS = ["dispense", "mix", "press", "test", "clean"]
+WRONG_VIAL = re.compile(r"wrong|mismatch|other vial|different vial", re.IGNORECASE)          # the same words the executor uses to tell a wrong vial from an unreadable label (cellpoc/executor/stand_in.py)
 
 
 class Ctx:
@@ -344,6 +345,11 @@ def r_faults(c: Ctx) -> Iterator[Problem]:
                 yield c.make("R31", "unknown_ingredient", ("faults", section, i, "where", "ingredient"), ingredient=where["ingredient"])
             if is_text(where.get("step")) and where["step"] in EXPECTED_STEPS and present and where["step"] not in present:
                 yield c.make("R48", "", ("faults", section, i, "where", "step"), step=where["step"])
+            risk = fault.get("risk")
+            if risk is not None and risk not in ("low", "high"):
+                yield c.make("R74", "value", ("faults", section, i, "risk"), risk=shown(risk))
+            elif risk == "high" and not (where.get("action") == "scan" and is_text(fault.get("cause")) and WRONG_VIAL.search(fault["cause"])):
+                yield c.make("R74", "kind", ("faults", section, i, "risk"))
             if section == "scripted" and num(fault.get("trial")):
                 if num(trials) and fault["trial"] > trials:
                     yield c.make("R29", "", ("faults", section, i, "trial"), trial=fmt(fault["trial"]), trials=fmt(trials))

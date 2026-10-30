@@ -12,21 +12,77 @@ import math
 import re
 import secrets
 import threading
+from dataclasses import asdict
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from ..connected import ConnectedError
 from ..platform_runner import PlatformRunError
+from ..scheduler import Inventory, Job, JobQueue
+from ..setup import load_setup
 from . import choices as setup_choices
+from .whatif import WhatIf, design_of
 from .page import build_console_page, build_live_page
 from .run import LIVE_FOLDER, LiveRun
 
 HOST = "127.0.0.1"
 PORT = 8504
 SPEEDS = (60, 120, 300, 600, 1800, 3600, 7200)
+JOBS_FOLDER = LIVE_FOLDER.parent / "jobs"
+DEMO_JOBS = (("job-1", "Drug 1", "example:1"), ("job-2", "Drug 2", "example:3"), ("job-3", "Drug 3", "example:2"))          # the demonstration queue: three drugs, each one of the example setups
+JOB_COMMANDS = ("job_start", "job_run_all", "job_stop_auto", "job_restock", "job_reset")
 LOCAL_HOSTS = {"127.0.0.1", "localhost", "[::1]"}
 FRAME_RULE = "frame-ancestors 'self' http://localhost:* http://127.0.0.1:*"          # only pages on this computer may show the live page in a frame
+
+
+class _RunHandle:
+    """A job that has been started: the live run behind it, as the queue needs to see it."""
+
+    def __init__(self, run: LiveRun, folder: Path):
+        self.run, self._folder = run, folder
+
+    @property
+    def status(self) -> str:
+        return self.run.status
+
+    @property
+    def reason(self) -> str:
+        return self.run.message.removeprefix("Blocked: ")          # the queue's own page already says it is blocked
+
+    @property
+    def folder(self) -> str:
+        return f"runs/jobs/{self._folder.name}" if self.run.saved else ""
+
+    def progress(self) -> tuple[int, int, int]:
+        with self.run.feed.lock:
+            rows, started = list(self.run.feed.results), len(self.run.feed.timelines)
+        return started, sum(1 for r in rows if r["verdict"] != "No result"), (rows[-1]["good_so_far"] if rows else 0)
+
+    def stop(self) -> None:
+        self.run.stop()
+
+
+class _ServerRunner:
+    """Runs a queue's jobs on this server: the job's setup becomes the live run the three views show, at the speed already chosen."""
+
+    def __init__(self, server: "LiveServer"):
+        self.server = server
+
+    def minimum_need(self, job: Job) -> dict[str, float]:
+        """The least of each ingredient one batch of this job could need: the setup's lowest percentage of it in a batch."""
+        setup = load_setup(setup_choices.find(job.setup_id).path).setup
+        return {i["id"]: setup["batch_size_g"] * i["min"] / 100 for i in setup["ingredients"]}
+
+    def start(self, job: Job, inventory: Inventory) -> _RunHandle:
+        server, choice = self.server, setup_choices.find(job.setup_id)
+        folder = JOBS_FOLDER / job.id
+        run = LiveRun(choice.path, speed=server.run.pacer.speed, save_to=folder, approval="person", supplies=inventory)
+        with server.lock:
+            server.run.stop()
+            server.run, server.current_id, server.active_label = run, choice.id, f"{job.drug}: {choice.label}"
+        run.start()
+        return _RunHandle(run, folder)
 
 
 class LiveServer:
@@ -41,7 +97,7 @@ class LiveServer:
         self.save_to = save_to
         self.current_id = setup_choices.id_for(setup_path, connected)
         self._first = make_run
-        self._start = lambda: LiveRun(setup_path, save_to=save_to, connected=connected)
+        self._start = lambda: LiveRun(setup_path, save_to=save_to, connected=connected, approval="person")          # a person is at the page: high-risk findings wait for them
         self.run = (make_run or self._start)()
         self._stage = None                                          # the MuJoCo picture of the cell (drawn on request; made the first time a picture is asked for)
         try:                                                        # the invisible window MuJoCo draws into has to be made here, on the main thread; if this computer cannot draw, the page keeps its own 3D scene
@@ -58,6 +114,11 @@ class LiveServer:
         self.console = ""
         self._refresh_page()
         self.lock = threading.Lock()
+        self._whatif: dict[str, WhatIf] = {}                         # the "try it yourself" tool for each study, made when first used
+        self._whatif_lock = threading.Lock()
+        self.active_label: str | None = None                       # while a job of the queue is the run on the page: which drug it is
+        jobs = [Job(job_id, drug, choice_id, getattr(setup_choices.find(choice_id), "label", choice_id)) for job_id, drug, choice_id in DEMO_JOBS]
+        self.queue = JobQueue(jobs, Inventory.demo(), _ServerRunner(self))
         outer = self
 
         class Handler(BaseHTTPRequestHandler):
@@ -94,10 +155,10 @@ class LiveServer:
                 if url.path == "/state":
                     q = parse_qs(url.query)
                     try:
-                        tl, ev = max(0, int(q.get("tl", ["0"])[0])), max(0, int(q.get("ev", ["0"])[0]))
+                        tl, ev, rp = max(0, int(q.get("tl", ["0"])[0])), max(0, int(q.get("ev", ["0"])[0])), max(0, int(q.get("rp", ["0"])[0]))
                     except ValueError:
                         return self._json(400, {"error": "The request for the state was not understood."})
-                    return self._json(200, outer.state(tl, ev))
+                    return self._json(200, outer.state(tl, ev, rp))
                 if url.path == "/health":
                     return self._send(200, b"ok", "text/plain")
                 if url.path == "/vision_check":                    # read-only: the cell's camera check of the ingredient bottle the arm picks up in this action (a drawn photograph, read by the vision part)
@@ -156,12 +217,15 @@ class LiveServer:
                     cmd, value = body.get("cmd"), body.get("value")
                 except (ValueError, TypeError, AttributeError):
                     return self._json(400, {"error": "The control was not understood."})
+                if cmd == "try_recipe":                                 # not a control of the run: it measures a recipe and sends the answer back
+                    result = outer.try_recipe(value)
+                    return self._json(400, {"error": result}) if isinstance(result, str) else self._json(200, {"whatif": result})
                 reply = outer.control(cmd, value)
                 if reply is not None:
                     return self._json(400, {"error": reply})
                 state = outer.state(0, 0)
                 if cmd not in ("restart", "setup"):                  # an answer to a control only brings the status; what is new in the feed comes with the page's own regular request
-                    for key in ("timelines", "timeline_total", "events", "event_total"):
+                    for key in ("timelines", "timeline_total", "events", "event_total", "replaced", "replaced_total"):
                         state.pop(key, None)
                 self._json(200, state)
 
@@ -265,24 +329,34 @@ class LiveServer:
             self.console = build_console_page(self.run.layout, token=self.token, autostart_hook=self.autostart_hook)
             self._page_layout_id = layout_id
 
-    def state(self, timelines_seen: int = 0, events_seen: int = 0) -> dict:
+    def state(self, timelines_seen: int = 0, events_seen: int = 0, replaced_seen: int = 0) -> dict:
         """The run's state plus which setup it is and which ones can be chosen (the names only: the server turns a name into a file from its own list)."""
-        out = self.run.state(timelines_seen, events_seen)
+        out = self.run.state(timelines_seen, events_seen, replaced_seen)
         listed = setup_choices.choices()
         out.update({"setup_id": self.current_id, "setups": [{"id": c.id, "label": c.label} for c in listed], "layout_id": self.run.layout.get("layout_id")})
         current = next((c for c in listed if c.id == self.current_id), None)
-        out["setup_label"] = current.label if current else self.current_id
+        out["setup_label"] = self.active_label or (current.label if current else self.current_id)
+        out["jobs"] = asdict(self.queue.snapshot())
+        out["design"] = design_of(self.run.settings)
         return out
 
     def _build(self, choice: "setup_choices.Choice") -> LiveRun:
         speed = self.run.pacer.speed
         if choice.kind == "connected":
             return LiveRun(speed=speed, save_to=self.save_to, connected=choice.scenario)
-        return LiveRun(choice.path, speed=speed, save_to=self.save_to)
+        return LiveRun(choice.path, speed=speed, save_to=self.save_to, approval="person")
 
     def control(self, cmd, value) -> str | None:
         """Do a control; returns a plain sentence when it cannot be done, else None."""
+        if cmd in JOB_COMMANDS:
+            return self._job_control(cmd, value)
         with self.lock:
+            if cmd in ("start", "speed") and self.run.approval_pending():
+                return "A decision is waiting. Accept or reject the flagged vial first."
+            if cmd == "decide":
+                if value not in ("accept", "reject"):
+                    return "That is not one of the choices on the page."
+                return self.run.decide(value)
             if cmd == "start":
                 self.run.start()
             elif cmd == "pause":
@@ -292,6 +366,7 @@ class LiveServer:
                     return "That speed is not one of the choices on the page."
                 self.run.set_speed(float(value))
             elif cmd == "restart":
+                self.active_label = None
                 self.run.stop()
                 speed = self.run.pacer.speed
                 known = setup_choices.find(self.current_id)
@@ -308,9 +383,39 @@ class LiveServer:
                 except Exception:  # noqa: BLE001 - the page shows a plain sentence, never a technical trace
                     return "That setup could not be started. Open it in the setup app to see what needs changing."
                 self.run.stop()
-                self.run, self.current_id = fresh, choice.id
+                self.run, self.current_id, self.active_label = fresh, choice.id, None
             else:
                 return "That control is not one this page has."
+        return None
+
+    def try_recipe(self, value):
+        """Try it yourself: the lab measures the recipe the person typed and the engine says what it would do next. The result, or a plain sentence when the recipe cannot be measured."""
+        with self._whatif_lock:
+            run = self.run
+            tool = self._whatif.get(self.current_id)
+            if tool is None or tool.settings is not run.settings:
+                tool = self._whatif[self.current_id] = WhatIf(run.settings)
+        try:
+            return tool.try_recipe(value)
+        except Exception:  # noqa: BLE001 - the page shows a plain sentence, never a technical trace
+            return "That recipe could not be tried. Please check the numbers."
+
+    def _job_control(self, cmd: str, value) -> str | None:
+        """The queue's controls. They name a job by its id and nothing else, and are done without the server's lock held (starting a job takes it for a moment)."""
+        if cmd == "job_start":
+            return self.queue.start(value) if isinstance(value, str) else "That job is not in the queue."
+        if cmd == "job_run_all":
+            return self.queue.run_all()
+        if cmd == "job_stop_auto":
+            self.queue.stop_automation()
+        elif cmd == "job_restock":
+            self.queue.restock()
+        elif cmd == "job_reset":
+            self.queue.reset()
+            with self.lock:                                            # the page goes back to an idle run of the study it was on
+                self.run.stop()
+                known = setup_choices.find(self.current_id)
+                self.run, self.active_label = (self._build(known) if known else self._start()), None
         return None
 
     def serve_forever(self) -> None:
@@ -328,6 +433,7 @@ class LiveServer:
         return thread
 
     def shutdown(self) -> None:
+        self.queue.close()
         self.run.stop()
         if self._stage is not None:
             self._stage.close()

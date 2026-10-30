@@ -14,7 +14,7 @@ There are three levels:
 
 Every rule below has a test: a deliberately wrong setup that must produce that message. The message shown under each rule is the one the test produced. What the person typed is quoted back in the message (for example `(you wrote '...')`).
 
-**134 messages, 134 tested, 0 without a test.**
+**136 messages, 136 tested, 0 without a test.**
 
 ## Setup file
 
@@ -644,6 +644,20 @@ _Used when a value is the wrong kind or out of range and no more specific messag
 - **Checks that:** a fault names a step that exists
 - **Test:** a fault in the Clean step after the Clean step was removed
 - **Message:** Faults › Scripted fault 1 › Where › Step: 'clean' is not a step in this setup. Choose one of the steps.
+
+### R74 (kind)
+
+- **Level:** Error: blocks saving
+- **Checks that:** a high-risk fault is a wrong vial at the barcode scan
+- **Test:** a high-risk fault that is a jam, not a wrong vial at the scan
+- **Message:** Faults › Scripted fault 1 › Risk: only a wrong vial at the barcode scan can be high risk, because it is the only fault a person can accept. Set the risk to low, or make this a fault at the barcode scan whose cause says wrong vial.
+
+### R74 (value)
+
+- **Level:** Error: blocks saving
+- **Checks that:** a fault's risk is low or high
+- **Test:** a fault whose risk is neither low nor high
+- **Message:** Faults › Scripted fault 1 › Risk: the risk 'medium' is not one of the choices. Write low or high.
 
 ## Baseline and engine
 

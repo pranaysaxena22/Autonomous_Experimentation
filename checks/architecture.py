@@ -50,7 +50,10 @@ ALLOWED = {
     # decision engine still imports only the modelling part, so the engine can reach neither this part nor the lab.
     "connected": {"contracts", "briefing", "modelling", "decision_engine", "virtual_lab", "platform_cell", "executor", "platform_info", "platform_runner", "reports", "setup"},
     # The live run (approved 2026-10-13: "go ahead" to the plan for a live page): the platform simulation on its own thread, paced, with a local page. A new, separate part; it is not the dashboard, and nothing imports it.
-    "live": {"contracts", "connected", "decision_engine", "executor", "platform_cell", "platform_info", "platform_runner", "setup", "virtual_lab", "physics", "vision"},          # (2026-10-22) the live page can show the cell's camera check of a bottle (the vision part reads a drawn photograph); and it can show the cell drawn by the MuJoCo model: a read-only picture route, drawn from the timelines the run has already published
+    "live": {"contracts", "scheduler", "connected", "decision_engine", "executor", "platform_cell", "platform_info", "platform_runner", "setup", "virtual_lab", "physics", "vision"},          # (2026-10-22) the live page can show the cell's camera check of a bottle (the vision part reads a drawn photograph); and it can show the cell drawn by the MuJoCo model: a read-only picture route, drawn from the timelines the run has already published
+    # The job scheduler (2026-10-30, the job queue): a queue of jobs for several drugs, a mock shelf of ingredients and the stub that picks what runs next. It imports only the shared data shapes; the live console hands it the
+    # thing that actually runs a job, so this part knows nothing about simulations, pages or files, and nothing but the live console imports it.
+    "scheduler": {"contracts"},
     # Stage 9 (same instruction): the report and export files are written from the run record only, like the dashboard reads it, with no other part involved.
     "reports": {"contracts", "run_store"},
     "platform_runner": {"settings", "contracts", "virtual_lab", "decision_engine", "cell_simulator", "run_store", "setup", "planner", "executor", "platform_cell", "viewer", "platform_info", "reports", "client_story"},   # wires the platform pieces together, like runner
